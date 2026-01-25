@@ -1,44 +1,38 @@
-// Migration script to hash existing PINs in database
-// Run this ONCE before switching to the new authentication system
-
-import prisma from '../server/utils/db'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
-async function migratePins() {
-  console.log('🔄 Starting PIN migration...')
-  
-  try {
-    const users = await (prisma as any).user.findMany()
-    console.log(`Found ${users.length} users to migrate`)
+const prisma = new PrismaClient()
 
-    for (const user of users) {
-      // Check if PIN is already hashed (bcrypt hashes start with $2b$)
-      if (user.pin.startsWith('$2b$')) {
-        console.log(`✓ ${user.name} already has hashed PIN, skipping`)
-        continue
-      }
+async function main() {
+  console.log('Start migrating PINs...')
 
-      // Hash the plaintext PIN
+  const users = await prisma.user.findMany()
+
+  for (const user of users) {
+    // If PIN is not a bcrypt hash (bcrypt hashes usually start with $2b$ and are 60 chars long)
+    // We assume any pin shorter than 50 chars is plain text
+    if (user.pin.length < 50) {
+      console.log(`Migrating PIN for user: ${user.name}`)
+      
       const hashedPin = await bcrypt.hash(user.pin, 10)
       
-      await (prisma as any).user.update({
+      await prisma.user.update({
         where: { id: user.id },
         data: { pin: hashedPin }
       })
       
-      console.log(`✓ Migrated PIN for ${user.name}`)
+      console.log(`Success: PIN hashed for ${user.name}`)
     }
-
-    console.log('✅ Migration completed successfully!')
-    console.log('⚠️ NOTE: All users should use their original PINs to login')
-    
-  } catch (error: any) {
-    console.error('❌ Migration failed:', error.message)
-    process.exit(1)
-  } finally {
-    await (prisma as any).$disconnect()
   }
+
+  console.log('Migration complete.')
 }
 
-// Run migration
-migratePins()
+main()
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })
