@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('../server/generated/prisma');
 const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient()
