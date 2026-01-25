@@ -1,0 +1,27 @@
+import { defineNuxtPlugin } from '#app'
+
+export default defineNuxtPlugin(() => {
+  const { accessToken } = useAuth()
+
+  // Global fetch interceptor to add Authorization header
+  const originalFetch = globalThis.$fetch || globalThis.fetch
+
+  globalThis.$fetch = $fetch.create({
+    onRequest({ options }) {
+      if (accessToken.value) {
+        options.headers = {
+          ...options.headers,
+          Authorization: `Bearer ${accessToken.value}`
+        }
+      }
+    },
+    onResponseError({ response }) {
+      // If 401 unauthorized, try refreshing token
+      if (response.status === 401) {
+        // Could implement auto-refresh here in a production app
+        const { logout } = useAuth()
+        logout()
+      }
+    }
+  })
+})

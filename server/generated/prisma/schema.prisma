@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model MenuItem {
+  id         Int                @id @default(autoincrement())
+  name       String             @unique
+  category   String             @default("Minuman")
+  price      Float
+  isRetail   Boolean            @default(false)
+  materialId Int?
+  material   Material?          @relation(fields: [materialId], references: [id])
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  recipes    MenuItemMaterial[]
+  sales      Sale[]
+}
+
+model Material {
+  id          Int                @id @default(autoincrement())
+  name        String             @unique
+  unit        String
+  stock       Float              @default(0)
+  costPerUnit Float              @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  minStock    Float              @default(100)
+  logs        MaterialLog[]
+  purchases   MaterialPurchase[]
+  recipes     MenuItemMaterial[]
+  menuItems   MenuItem[]
+}
+
+model MenuItemMaterial {
+  id         Int      @id @default(autoincrement())
+  menuItemId Int
+  materialId Int
+  quantity   Float
+  createdAt  DateTime @default(now())
+  material   Material @relation(fields: [materialId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Sale {
+  id             Int      @id @default(autoincrement())
+  date           DateTime @default(now())
+  menuItemId     Int
+  qty            Int
+  priceSnapshot  Float
+  costSnapshot   Float    @default(0)
+  total          Float
+  paymentMethod  String
+  createdAt      DateTime @default(now())
+  shiftId        Int?
+  transactionId  String?
+  discountAmount Float    @default(0)
+  promoId        Int?
+  menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
+  shift          Shift?   @relation(fields: [shiftId], references: [id])
+  promo          Promo?   @relation(fields: [promoId], references: [id])
+}
+
+model Shift {
+  id          Int       @id @default(autoincrement())
+  userId      Int?
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  openingCash Float     @default(0)
+  closingCash Float?
+  status      String    @default("OPEN")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  sales       Sale[]
+  user        User?     @relation(fields: [userId], references: [id])
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @default(now())
+  description String
+  category    String
+  amount      Float
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+model MaterialLog {
+  id           Int      @id @default(autoincrement())
+  materialId   Int
+  type         String
+  quantity     Float
+  balanceAfter Float
+  reason       String?
+  createdAt    DateTime @default(now())
+  material     Material @relation(fields: [materialId], references: [id])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  pin       String
+  role      String
+  createdAt DateTime @default(now())
+  shifts    Shift[]
+}
+
+model MaterialPurchase {
+  id           Int      @id @default(autoincrement())
+  materialId   Int
+  quantity     Float
+  pricePerUnit Float
+  totalCost    Float
+  supplier     String?
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now())
+  material     Material @relation(fields: [materialId], references: [id])
+}
+
+model Promo {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  type      String // NOMINAL or PERCENT
+  value     Float
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+}

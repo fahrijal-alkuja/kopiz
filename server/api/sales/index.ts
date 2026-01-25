@@ -1,0 +1,433 @@
+import prisma from '../../utils/db'
+import { createSaleSchema, updateSaleSchema } from '../../utils/schemas'
+
+export default defineEventHandler(async (event) => {
+  const method = event.method
+  const query = getQuery(event)
+
+  if (method === 'GET') {
+    // Filter by date (defaults to today)
+    const dateStr = typeof query.date === 'string' ? query.date : undefined
+    let where = {}
+    
+    if (dateStr) {
+      const startOfDay = new Date(dateStr)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(dateStr)
+      endOfDay.setHours(23, 59, 59, 999)
+      
+      where = {
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      }
+    }
+
+    const sales = await prisma.sale.findMany({
+      where,
+      include: {
+        menuItem: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    return sales
+  }
+
+  if (method === 'POST') {
+    const body = await readBody(event)
+    
+    // Validate input
+    const validation = createSaleSchema.safeParse(body)
+    if (!validation.success) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Data tidak valid',
+        data: validation.error.issues
+      })
+    }
+    
+    const validatedData = validation.data
+    
+    // Normalize items
+    let cartItems = validatedData.items || []
+    if (cartItems.length === 0 && validatedData.menuItemId && validatedData.qty) {
+      cartItems.push({
+        menuItemId: validatedData.menuItemId,
+        qty: validatedData.qty
+      })
+    }
+
+    if (cartItems.length === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Tidak ada item yang dipilih' })
+    }
+
+    // 1. Fetch active shift
+    const activeShift = await (prisma as any).shift.findFirst({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const transactionId = crypto.randomUUID()
+    const salesToCreate: any[] = []
+
+    // 2. Fetch Packaging Material if Takeaway
+    let packagingMaterial: any = null
+    if (validatedData.isTakeaway) {
+      packagingMaterial = await prisma.material.findFirst({
+        where: { name: { contains: 'Kemasan', mode: 'insensitive' } }
+      })
+    }
+
+    // 3. Fetch menu items for subtotal calculation
+    const itemIds = cartItems.map(i => i.menuItemId)
+    const menuItems = await (prisma as any).menuItem.findMany({
+      where: { id: { in: itemIds } }
+    })
+
+    const subtotal = menuItems.reduce((sum: number, item: any) => {
+      const request = cartItems.find((i: any) => i.menuItemId === item.id)
+      return sum + (item.price * (request?.qty || 0))
+    }, 0)
+
+    // 4. Process Transaction
+    const result = await prisma.$transaction(async (tx: any) => {
+      let createdSales: any[] = []
+
+      for (const itemRequest of cartItems) {
+        // Fetch item details with recipes and materials
+        const item = await tx.menuItem.findUnique({
+          where: { id: itemRequest.menuItemId },
+          include: { 
+            material: true,
+            recipes: {
+              include: { material: true }
+            }
+          }
+        })
+
+        if (!item) continue 
+
+        const priceSnapshot = item.price
+        const itemSubtotal = priceSnapshot * itemRequest.qty
+        const itemDiscount = subtotal > 0 ? ((itemSubtotal / subtotal) * (validatedData.discountAmount || 0)) : 0
+        const total = parseFloat((itemSubtotal - itemDiscount).toFixed(2))
+
+        // Calculate Cost Snapshot
+        let singleUnitCost = 0
+        if (item.isRetail && item.material) {
+          singleUnitCost = item.material.costPerUnit || 0
+        } else if (item.recipes) {
+          for (const recipeItem of item.recipes) {
+            singleUnitCost += recipeItem.quantity * (recipeItem.material.costPerUnit || 0)
+          }
+        }
+
+        // Add Packaging Cost if Takeaway (only for non-retail usually, but here we cover all if selected)
+        if (validatedData.isTakeaway && packagingMaterial) {
+          singleUnitCost += (packagingMaterial.costPerUnit || 0)
+        }
+
+        // Create Sale Record
+        const sale = await tx.sale.create({
+          data: {
+            transactionId,
+            menuItemId: item.id,
+            qty: itemRequest.qty,
+            priceSnapshot,
+            costSnapshot: singleUnitCost,
+            discountAmount: itemDiscount,
+            promoId: validatedData.promoId || null,
+            total,
+            paymentMethod: validatedData.paymentMethod,
+            shiftId: activeShift?.id || null,
+            date: new Date()
+          }
+        })
+        
+        createdSales.push(sale)
+
+        // Deduct Stock
+        if (item.isRetail && item.materialId) {
+          // DIRECT SELL: Deduct from linked material 1:1
+          const updatedMaterial = await tx.material.update({
+            where: { id: item.materialId },
+            data: {
+              stock: {
+                decrement: itemRequest.qty
+              }
+            }
+          })
+
+          await (tx as any).materialLog.create({
+            data: {
+              materialId: item.materialId,
+              type: 'OUT',
+              quantity: itemRequest.qty,
+              balanceAfter: updatedMaterial.stock,
+              reason: `Retail Sale #${transactionId.slice(0,8)}...`,
+              createdAt: new Date()
+            }
+          })
+        } else if (item.recipes) {
+          // RECIPE BASED: Deduct using ingredients
+          for (const recipeItem of item.recipes) {
+            const updatedMaterial = await tx.material.update({
+              where: { id: recipeItem.materialId },
+              data: {
+                stock: {
+                  decrement: recipeItem.quantity * itemRequest.qty
+                }
+              }
+            })
+
+            // Log movement
+            await (tx as any).materialLog.create({
+              data: {
+                materialId: recipeItem.materialId,
+                type: 'OUT',
+                quantity: recipeItem.quantity * itemRequest.qty,
+                balanceAfter: updatedMaterial.stock,
+                reason: `Trx #${transactionId.slice(0,8)}...`,
+                createdAt: new Date()
+              }
+            })
+          }
+        }
+
+        // 3. Deduct Packaging Stock if Takeaway
+        if (validatedData.isTakeaway && packagingMaterial) {
+          const updatedPkg = await tx.material.update({
+            where: { id: packagingMaterial.id },
+            data: {
+              stock: {
+                decrement: itemRequest.qty
+              }
+            }
+          })
+
+          await (tx as any).materialLog.create({
+            data: {
+              materialId: packagingMaterial.id,
+              type: 'OUT',
+              quantity: itemRequest.qty,
+              balanceAfter: updatedPkg.stock,
+              reason: `Takeaway Pkg (Trx #${transactionId.slice(0,8)})`,
+              createdAt: new Date()
+            }
+          })
+        }
+      }
+      
+      return createdSales
+    })
+
+    return result
+  }
+
+  if (method === 'DELETE') {
+    const body = await readBody(event)
+    
+    // Handle Grouped Transaction Delete
+    if (body.transactionId) {
+      const sales = await (prisma as any).sale.findMany({
+        where: { transactionId: body.transactionId },
+        include: {
+          menuItem: {
+            include: { recipes: true }
+          }
+        }
+      })
+
+      if (sales.length === 0) {
+        throw createError({ statusCode: 404, statusMessage: 'Transaction not found' })
+      }
+
+      await prisma.$transaction(async (tx: any) => {
+        for (const sale of sales) {
+          // Restore stock
+          if (sale.menuItem && sale.menuItem.recipes) {
+            for (const recipeItem of sale.menuItem.recipes) {
+              const updatedMaterial = await tx.material.update({
+                where: { id: recipeItem.materialId },
+                data: {
+                  stock: {
+                    increment: recipeItem.quantity * sale.qty
+                  }
+                }
+              })
+
+              // Log movement
+              await (tx as any).materialLog.create({
+                data: {
+                  materialId: recipeItem.materialId,
+                  type: 'IN',
+                  quantity: recipeItem.quantity * sale.qty,
+                  balanceAfter: updatedMaterial.stock,
+                  reason: `Void Trx #${body.transactionId.slice(0,8)}...`,
+                  createdAt: new Date()
+                }
+              })
+            }
+          }
+        }
+
+        // Delete all sales in transaction
+        await tx.sale.deleteMany({
+          where: { transactionId: body.transactionId }
+        })
+      })
+
+      return { success: true }
+    }
+
+    // Handle Single Item Delete (Legacy or specific)
+    const saleId = parseInt(body.id)
+    const sale = await (prisma as any).sale.findUnique({
+      where: { id: saleId },
+      include: {
+        menuItem: {
+          include: { recipes: true }
+        }
+      }
+    })
+
+    if (!sale) {
+      throw createError({ statusCode: 404, statusMessage: 'Sale not found' })
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      // Restore stock
+      if (sale.menuItem && sale.menuItem.recipes) {
+        for (const recipeItem of sale.menuItem.recipes) {
+          const updatedMaterial = await tx.material.update({
+            where: { id: recipeItem.materialId },
+            data: {
+              stock: {
+                increment: recipeItem.quantity * sale.qty
+              }
+            }
+          })
+
+          // Log movement
+          await (tx as any).materialLog.create({
+            data: {
+              materialId: recipeItem.materialId,
+              type: 'IN',
+              quantity: recipeItem.quantity * sale.qty,
+              balanceAfter: updatedMaterial.stock,
+              reason: `Pembatalan Transaksi #${sale.id}`,
+              createdAt: new Date()
+            }
+          })
+        }
+      }
+
+      // Delete sale
+      await tx.sale.delete({
+        where: { id: saleId }
+      })
+    })
+
+    return { success: true }
+  }
+
+  if (method === 'PUT') {
+    const body = await readBody(event)
+    const saleId = parseInt(body.id)
+
+    const existingSale = await (prisma as any).sale.findUnique({
+      where: { id: saleId },
+      include: {
+        menuItem: {
+          include: { recipes: true }
+        }
+      }
+    })
+
+    if (!existingSale) {
+      throw createError({ statusCode: 404, statusMessage: 'Sale not found' })
+    }
+
+    // Fetch new menu item details
+    const newItem = await (prisma as any).menuItem.findUnique({
+      where: { id: body.menuItemId },
+      include: { recipes: true }
+    })
+
+    if (!newItem) {
+      throw createError({ statusCode: 404, statusMessage: 'New Menu Item not found' })
+    }
+
+    const priceSnapshot = newItem.price
+    const total = parseFloat((priceSnapshot * body.qty).toFixed(2))
+
+    await prisma.$transaction(async (tx: any) => {
+      // 1. Restore old stock
+      if (existingSale.menuItem && existingSale.menuItem.recipes) {
+        for (const recipeItem of existingSale.menuItem.recipes) {
+          const updatedMaterial = await tx.material.update({
+            where: { id: recipeItem.materialId },
+            data: {
+              stock: {
+                increment: recipeItem.quantity * existingSale.qty
+              }
+            }
+          })
+
+          // Log movement
+          await (tx as any).materialLog.create({
+            data: {
+              materialId: recipeItem.materialId,
+              type: 'IN',
+              quantity: recipeItem.quantity * existingSale.qty,
+              balanceAfter: updatedMaterial.stock,
+              reason: `Koreksi Transaksi #${saleId} (Pengembalian Stok Lama)`,
+              createdAt: new Date()
+            }
+          })
+        }
+      }
+
+      // 2. Deduct new stock
+      if (newItem.recipes) {
+        for (const recipeItem of newItem.recipes) {
+          const updatedMaterial = await tx.material.update({
+            where: { id: recipeItem.materialId },
+            data: {
+              stock: {
+                decrement: recipeItem.quantity * body.qty
+              }
+            }
+          })
+
+          // Log movement
+          await (tx as any).materialLog.create({
+            data: {
+              materialId: recipeItem.materialId,
+              type: 'OUT',
+              quantity: recipeItem.quantity * body.qty,
+              balanceAfter: updatedMaterial.stock,
+              reason: `Koreksi Transaksi #${saleId} (Penyesuaian Stok Baru)`,
+              createdAt: new Date()
+            }
+          })
+        }
+      }
+
+      // 3. Update sale
+      await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          menuItemId: body.menuItemId,
+          qty: parseInt(body.qty),
+          priceSnapshot,
+          total,
+          paymentMethod: body.paymentMethod
+        }
+      })
+    })
+
+    return { success: true }
+  }
+})
