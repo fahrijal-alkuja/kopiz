@@ -5,18 +5,17 @@ require('dotenv').config();
 const { PrismaClient } = require('../server/generated/prisma');
 const bcrypt = require('bcrypt');
 
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
+
 if (!process.env.DATABASE_URL) {
   console.error('Error: DATABASE_URL is not set via .env');
   process.exit(1);
 }
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-})
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Start migrating PINs...')
