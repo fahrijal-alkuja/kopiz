@@ -1,9 +1,22 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+require('dotenv').config();
+
 const { PrismaClient } = require('../server/generated/prisma');
 const bcrypt = require('bcrypt');
 
-const prisma = new PrismaClient()
+if (!process.env.DATABASE_URL) {
+  console.error('Error: DATABASE_URL is not set via .env');
+  process.exit(1);
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+})
 
 async function main() {
   console.log('Start migrating PINs...')
