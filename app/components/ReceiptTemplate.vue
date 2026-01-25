@@ -2,9 +2,9 @@
   <div id="receipt-template" class="hidden-on-screen">
     <div class="receipt">
       <div class="header">
-        <h2>APPKOPZ</h2>
-        <p>Jl. Kopi No. 1, Jakarta</p>
-        <p>Telp: 0812-3456-7890</p>
+        <h2>Kopi Z</h2>
+        <p>Premium Quality, Bold Character</p>
+        <p>Telp: 0853-9346-4054</p>
         <div class="sperator">================================</div>
       </div>
       
@@ -43,7 +43,6 @@
       <div class="footer">
         <p>Terima Kasih</p>
         <p>Selamat Menikmati!</p>
-        <p>Wifi: KopiEnak / Pass: 123456</p>
       </div>
     </div>
   </div>
@@ -76,39 +75,55 @@ function formatDate(date) {
 }
 </script>
 
-<style scoped>
-/* Screen styles: hide it */
-.hidden-on-screen {
-  display: none;
-}
 
-/* Print styles */
+
+<!-- Global Print Styles (Must be non-scoped to affect body) -->
+<style>
 @media print {
   body * {
     visibility: hidden;
   }
   
-  .hidden-on-screen, .hidden-on-screen * {
+  /* Ensure the receipts container is visible */
+  #receipt-template, #receipt-template * {
     visibility: visible;
-    display: block;
   }
 
-  .hidden-on-screen {
+  /* Reset layout for full page takeover */
+  #receipt-template {
     position: absolute;
     left: 0;
     top: 0;
-    width: 58mm; /* Standard Thermal Paper */
-    font-family: 'Courier New', Courier, monospace; /* Monospace is best for receipts */
-    font-size: 12px;
-    color: black;
-    background: white;
-    padding: 0;
+    width: 58mm; /* Fixed thermal width */
     margin: 0;
+    padding: 0;
+    background: white;
   }
 
+  /* Hide default dashboard elements explicitly just in case */
+  .dashboard-header, .pos-container, sidebar, nav, header {
+    display: none !important;
+  }
+}
+</style>
+
+<style scoped>
+/* Screen styles: hide it usually */
+.hidden-on-screen {
+  display: none;
+}
+
+@media print {
+  .hidden-on-screen {
+    display: block;
+  }
+  
   .receipt {
     width: 100%;
-    padding-right: 2mm; /* Log margin */
+    padding-right: 2mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: black;
   }
 
   h2 {
@@ -133,20 +148,20 @@ function formatDate(date) {
   }
 
   .item-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2px;
-  }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2px;
-  }
-
-  .total-amount {
-    font-weight: bold;
-    font-size: 14px;
-  }
+     display: flex;
+     justify-content: space-between;
+     margin-bottom: 2px;
+   }
+ 
+   .row {
+     display: flex;
+     justify-content: space-between;
+     margin-bottom: 2px;
+   }
+ 
+   .total-amount {
+     font-weight: bold;
+     font-size: 14px;
+   }
 }
 </style>

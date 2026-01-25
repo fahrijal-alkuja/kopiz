@@ -148,6 +148,11 @@
               style="padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); cursor: pointer; font-weight: 600;"
             >📱 QRIS</button>
           </div>
+          <!-- Auto Print Toggle -->
+          <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="autoprint" v-model="isAutoPrint" style="width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer;">
+            <label for="autoprint" style="cursor: pointer; color: var(--color-text); font-weight: 500;">Cetak Struk Otomatis</label>
+          </div>
         </div>
 
         <!-- Promo Selection -->
@@ -217,53 +222,8 @@
       @confirm="modal.onConfirm"
     />
 
-    <!-- Hidden Print Receipt Section -->
-    <div v-if="printingTransaction" id="receipt-print" class="print-only">
-      <div class="receipt-container">
-        <div style="text-align: center;">
-          <div class="shop-name">Kopi Z</div>
-          <div class="shop-sub">Premium Quality, Bold Character</div>
-          <div class="separator">*******************************</div>
-        </div>
-
-        <div class="receipt-meta">
-          <div class="meta-row">
-            <span>No  : {{ printingTransaction.id.slice(0, 8) }}</span>
-            <span>{{ new Date(printingTransaction.date).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) }}</span>
-          </div>
-          <div class="meta-row">
-            <span>Tgl : {{ new Date(printingTransaction.date).toLocaleDateString('id-ID') }}</span>
-          </div>
-          <div class="separator">-------------------------------</div>
-        </div>
-        
-        <div class="receipt-items">
-          <div v-for="(item, idx) in printingTransaction.items" :key="idx" class="item-block">
-            <div class="item-name">{{ item.name }}</div>
-            <div class="item-details">
-              <span>{{ item.qty }} x {{ item.price.toLocaleString('id-ID') }}</span>
-              <span>{{ (item.qty * item.price).toLocaleString('id-ID') }}</span>
-            </div>
-          </div>
-          <div class="separator">-------------------------------</div>
-        </div>
-
-        <div class="receipt-footer">
-          <div class="total-row">
-            <span>TOTAL</span>
-            <span>Rp {{ printingTransaction.total.toLocaleString('id-ID') }}</span>
-          </div>
-          <div class="meta-row" style="margin-top: 5px;">
-            <span>Metode: {{ printingTransaction.paymentMethod }}</span>
-          </div>
-          <div class="separator">*******************************</div>
-          <div style="text-align: center;">
-            <div class="thank-you">TERIMA KASIH</div>
-            <div class="thank-you">ATAS KUNJUNGAN ANDA!</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Thermal Receipt Component -->
+    <ReceiptTemplate v-if="printingTransaction" :transaction="printingTransaction" />
   </div>
 </template>
 
@@ -277,6 +237,8 @@ const filterDate = ref(today)
 const { data: sales, refresh: refreshSales } = await useFetch('/api/sales', {
   query: { date: filterDate } // reactive query
 })
+
+const { user } = useAuth()
 
 // Group Sales by Transaction ID for History List
 const groupedSales = computed(() => {
@@ -386,6 +348,7 @@ function quickAddToCart(menu) {
 const cart = ref([])
 const paymentMethod = ref('Cash')
 const isTakeaway = ref(false)
+const isAutoPrint = ref(true)
 const selectedPromo = ref(null)
 const { data: promos } = await useFetch('/api/promo')
 const showCartDrawer = ref(false)
@@ -433,8 +396,14 @@ const discountAmount = computed(() => {
 async function submitTransaction() {
   if (cart.value.length === 0) return
   
+  // Capture state for printing
+  const currentCart = [...cart.value]
+  const currentTotal = cartTotal.value
+  const currentDiscount = discountAmount.value
+  const currentPayment = paymentMethod.value
+
   try {
-    await $fetch('/api/sales', {
+    const response = await $fetch('/api/sales', {
       method: 'POST',
       body: {
         items: cart.value.map(i => ({ menuItemId: i.menuItemId, qty: i.qty })),
@@ -444,6 +413,24 @@ async function submitTransaction() {
         discountAmount: discountAmount.value
       }
     })
+    
+    // Auto Print
+    if (isAutoPrint.value && response && response.length > 0) {
+      const trxId = response[0].transactionId || 'NEW'
+      
+      printTransaction({
+        id: trxId,
+        date: new Date(),
+        total: Math.max(0, currentTotal - currentDiscount),
+        paymentMethod: currentPayment,
+        cashier: user.value?.name || 'Barista',
+        items: currentCart.map(i => ({
+          name: i.name,
+          qty: i.qty,
+          total: i.total
+        }))
+      })
+    }
     
     // Success
     cart.value = []
@@ -540,83 +527,12 @@ function findMenuIdByName(name) {
 <style>
 /* Global Print Styles */
 /* Global Print Styles */
+/* Global Print Styles */
 @media print {
-  @page {
-    size: 58mm auto;
-    margin: 0mm;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-  
-  #receipt-print, #receipt-print * {
-    visibility: visible;
-  }
-  
-  #receipt-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 58mm;
-    margin: 0;
-    padding: 2mm;
-    background: white;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 9pt;
-    color: black;
-  }
-
-  .receipt-container {
-    width: 100%;
-  }
-
-  .shop-name {
-    font-weight: bold;
-    font-size: 14pt;
-    text-align: center;
-  }
-
-  .shop-sub {
-    font-size: 8pt;
-    text-align: center;
-    margin-bottom: 2mm;
-  }
-
-  .separator {
-    text-align: center;
-    margin: 1mm 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .meta-row, .item-details, .total-row {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .item-block {
-    margin-bottom: 2mm;
-  }
-
-  .item-name {
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-
-  .total-row {
-    font-weight: bold;
-    font-size: 11pt;
-    margin-top: 2mm;
-  }
-
-  .thank-you {
-    font-size: 8pt;
-    margin-top: 1mm;
-  }
-
-  .print-only {
-    display: block !important;
+  /* Only global settings, specific layout is in ReceiptTemplate */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 </style>
