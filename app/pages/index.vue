@@ -54,7 +54,7 @@
         <div class="card" style="overflow: hidden;">
           <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--color-text-muted);">Tren Omset Bulan Ini</h3>
           <div class="table-container" style="margin-bottom: 0; padding-bottom: 10px;">
-            <div style="height: 300px; min-width: 500px;">
+            <div style="height: 300px; width: 100%;">
               <Line v-if="chartData" :data="chartData" :options="chartOptions" />
             </div>
           </div>

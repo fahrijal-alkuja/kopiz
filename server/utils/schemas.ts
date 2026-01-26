@@ -21,7 +21,8 @@ export const updateSaleSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  pin: z.string().min(1, 'PIN is required')
+  pin: z.string().min(1, 'PIN is required'),
+  userId: z.coerce.number().optional() // Make optional temporarily to avoid breaking anything else, but logic requires it
 })
 
 export const createUserSchema = z.object({

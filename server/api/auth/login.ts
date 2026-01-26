@@ -10,40 +10,27 @@ export default defineEventHandler(async (event) => {
   // Validate input
   const validation = loginSchema.safeParse(body)
   if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Input tidak valid',
-      data: validation.error.issues
-    })
+    throw createError({ statusCode: 400, statusMessage: 'Input tidak valid' })
   }
 
-  const { pin } = validation.data
+  // Expect userId + pin now
+  const { pin, userId } = validation.data as any // Cast for now, need schema update
 
-  // Find all users (since we don't have username/role in login)
-  // In a larger app, we'd require a user ID or username.
-  const users = await prisma.user.findMany()
-  
-  let validUser = null
-  
-  for (const user of users) {
-    let isMatch = false
-    try {
-      isMatch = await bcrypt.compare(pin, user.pin)
-    } catch (e) {
-      // Ignore bcrypt errors
-    }
-
-    if (isMatch) {
-      validUser = user
-      break
-    }
+  if (!userId) {
+    throw createError({ statusCode: 400, statusMessage: 'User ID diperlukan' })
   }
 
+  const validUser = await prisma.user.findUnique({
+    where: { id: parseInt(userId) }
+  })
+  
   if (!validUser) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'PIN Salah'
-    })
+    throw createError({ statusCode: 401, statusMessage: 'User tidak ditemukan' })
+  }
+
+  const isMatch = await bcrypt.compare(pin, validUser.pin)
+  if (!isMatch) {
+    throw createError({ statusCode: 401, statusMessage: 'PIN Salah' })
   }
 
   // Generate tokens

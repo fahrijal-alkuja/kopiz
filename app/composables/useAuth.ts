@@ -37,13 +37,16 @@ export const useAuth = () => {
     }
   }
 
-  const login = async (pin: string | number) => {
+  const login = async (pin: string | number, userId: number) => {
     try {
       startLoading()
       
       const response = await $fetch<{ accessToken: string, user: any }>('/api/auth/login', {
         method: 'POST',
-        body: { pin: pin.toString() }
+        body: { 
+          pin: pin.toString(), 
+          userId: userId // Now passing userId
+        }
       })
       
       user.value = response.user
@@ -55,7 +58,7 @@ export const useAuth = () => {
       success('Login berhasil!')
       return response
     } catch (err: any) {
-      showError(err.data?.statusMessage || 'Login gagal. Periksa PIN Anda.')
+      showError(err.data?.statusMessage || 'Login gagal.')
       throw err
     } finally {
       stopLoading()

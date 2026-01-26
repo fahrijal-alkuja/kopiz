@@ -4,21 +4,43 @@
       <div style="text-align: center; margin-bottom: 2rem;">
         <img src="/logo.jpg" alt="Kopi Z" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--color-primary); margin-bottom: 1rem;">
         <h1 style="margin: 0; color: var(--color-primary);">APPKOPZ</h1>
-        <p style="color: var(--color-text-muted);">Masukkan PIN untuk masuk</p>
+        <p style="color: var(--color-text-muted);">
+          {{ selectedUser ? `Halo, ${selectedUser.name}` : 'Pilih Akun' }}
+        </p>
       </div>
 
-      <div class="pin-display">
-        <span v-for="i in 4" :key="i" class="pin-dot" :class="{ active: pin.length >= i }"></span>
-      </div>
+      <Transition name="fade" mode="out-in">
+        <!-- STEP 1: SELECT USER -->
+        <div v-if="!selectedUser" class="user-grid" key="users">
+          <div v-for="user in users" :key="user.id" class="user-btn" @click="selectUser(user)">
+             <div class="user-avatar">
+              {{ user.name.charAt(0).toUpperCase() }}
+            </div>
+            <div style="font-weight: 600;">{{ user.name }}</div>
+          </div>
+        </div>
 
-      <div class="pin-pad">
-        <button v-for="n in 9" :key="n" @click="press(n)">{{ n }}</button>
-        <button @click="clear">C</button>
-        <button @click="press(0)">0</button>
-        <button @click="backspace">⌫</button>
-      </div>
+        <!-- STEP 2: INPUT PIN -->
+        <div v-else class="pin-step" key="input">
+          <div class="pin-display">
+             <!-- Use bounce animation for dots when validating -->
+            <span v-for="i in 4" :key="i" class="pin-dot" :class="{ active: pin.length >= i, pulse: isLoading && pin.length === 4 }"></span>
+          </div>
 
-      <div v-if="error" class="error-msg">{{ error }}</div>
+          <div v-if="isLoading" class="loading-dots">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+
+          <div v-else class="pin-pad">
+            <button v-for="n in 9" :key="n" @click="press(n)">{{ n }}</button>
+            <button @click="resetUser" style="background: var(--color-warning); color: black;">↩</button>
+            <button @click="press(0)">0</button>
+            <button @click="backspace">⌫</button>
+          </div>
+
+          <div v-if="error" class="error-msg shake">{{ error }}</div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -28,22 +50,42 @@ definePageMeta({
   layout: false
 })
 
+const { data: users } = await useFetch('/api/auth/users')
+const selectedUser = ref(null)
 const pin = ref('')
 const error = ref('')
+const isLoading = ref(false) // New state
 const { login } = useAuth()
 
+function selectUser(user) {
+  selectedUser.value = user
+  pin.value = ''
+  error.value = ''
+}
+
 async function press(n) {
+  if (isLoading.value) return // Prevent input while loading
+  
   if (pin.value.length < 4) {
     pin.value += n
     error.value = ''
     
     if (pin.value.length === 4) {
+      if (!selectedUser.value) return 
+      
+      isLoading.value = true // Start loading
+      
+      // Artificial delay for better UX (optional, but requested for "feel")
+      await new Promise(r => setTimeout(r, 600)) 
+      
       try {
-        await login(pin.value)
+        await login(pin.value, selectedUser.value.id)
         navigateTo('/')
       } catch (e) {
         error.value = 'PIN Salah, coba lagi.'
         pin.value = ''
+      } finally {
+        isLoading.value = false // Stop loading
       }
     }
   }
@@ -55,6 +97,12 @@ function clear() {
 
 function backspace() {
   pin.value = pin.value.slice(0, -1)
+}
+
+function resetUser() {
+  selectedUser.value = null
+  pin.value = ''
+  error.value = ''
 }
 </script>
 
@@ -69,8 +117,46 @@ function backspace() {
 
 .login-card {
   width: 100%;
-  max-width: 350px;
+  max-width: 400px;
   padding: 2.5rem;
+}
+
+.user-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.user-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+}
+
+.user-btn:hover {
+  background: var(--color-border);
+  transform: translateY(-2px);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .pin-display {
@@ -126,5 +212,54 @@ function backspace() {
   color: var(--color-danger);
   margin-top: 1.5rem;
   font-size: 0.9rem;
+}
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Loading Dots Animation */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  animation: bounce 0.6s infinite alternate;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  to { transform: translateY(-8px); opacity: 0.5; }
 }
 </style>

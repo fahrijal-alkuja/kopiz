@@ -81,11 +81,17 @@ async function syncOfflineSales() {
           <li v-if="isOwner"><NuxtLink to="/promo" class="nav-link">🏷️ Manajemen Promo</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/users" class="nav-link">👥 Manajemen Barista</NuxtLink></li>
           
+          
           <!-- New Admin Links -->
           <li v-if="isOwner" style="margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem;">
             <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 0.5rem; padding-left: 1rem;">SYSTEM</div>
             <NuxtLink to="/admin/audit" class="nav-link">📜 Audit Logs</NuxtLink>
             <NuxtLink to="/admin/backups" class="nav-link">💾 Backups</NuxtLink>
+          </li>
+
+          <!-- Mobile Logout Item (Visible only on mobile via CSS) -->
+          <li class="mobile-only-logout">
+            <a @click="logout" class="nav-link" style="color: var(--color-danger); cursor: pointer;">🚪 Keluar</a>
           </li>
         </ul>
       </nav>
@@ -153,6 +159,17 @@ async function syncOfflineSales() {
     padding: 0.6rem 1rem;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--color-border);
+  }
+
+  .mobile-only-logout {
+    display: block;
+  }
+}
+
+/* Hide mobile logout on desktop */
+@media (min-width: 769px) {
+  .mobile-only-logout {
+    display: none;
   }
 }
 </style>

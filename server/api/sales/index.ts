@@ -70,8 +70,15 @@ export default defineEventHandler(async (event) => {
       orderBy: { createdAt: 'desc' }
     })
 
+    // RULE: Barista/Kasir MUST have an active shift
+    if (!activeShift && user?.role !== 'OWNER') {
+      throw createError({ 
+        statusCode: 403, 
+        statusMessage: 'Shift belum dibuka. Harap buka kasir terlebih dahulu.' 
+      })
+    }
+    
     const transactionId = crypto.randomUUID()
-    const salesToCreate: any[] = []
 
     // 2. Fetch Packaging Material if Takeaway
     let packagingMaterial: any = null
@@ -81,10 +88,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Fetch menu items for subtotal calculation
+    // 3. BATCH FETCH: Get all required data in ONE query
     const itemIds = cartItems.map(i => i.menuItemId)
+    
+    // Fetch all menu items AND their recipes/materials deeply
     const menuItems = await (prisma as any).menuItem.findMany({
-      where: { id: { in: itemIds } }
+      where: { id: { in: itemIds } },
+      include: {
+        material: true,
+        recipes: {
+          include: { material: true }
+        }
+      }
     })
 
     const subtotal = menuItems.reduce((sum: number, item: any) => {
@@ -92,22 +107,16 @@ export default defineEventHandler(async (event) => {
       return sum + (item.price * (request?.qty || 0))
     }, 0)
 
-    // 4. Process Transaction
+    // 4. Process Transaction in ONE Transaction Block
     const result = await prisma.$transaction(async (tx: any) => {
       let createdSales: any[] = []
 
+      // Prepare bulk data for sales creation? No, we need individual calculations per item
+      // But we iterate IN MEMORY now, which is fast.
+      
       for (const itemRequest of cartItems) {
-        // Fetch item details with recipes and materials
-        const item = await tx.menuItem.findUnique({
-          where: { id: itemRequest.menuItemId },
-          include: { 
-            material: true,
-            recipes: {
-              include: { material: true }
-            }
-          }
-        })
-
+        // Find pre-fetched item from array (No DB call here!)
+        const item = menuItems.find((m: any) => m.id === itemRequest.menuItemId)
         if (!item) continue 
 
         const priceSnapshot = item.price
@@ -125,7 +134,6 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        // Add Packaging Cost if Takeaway (only for non-retail usually, but here we cover all if selected)
         if (validatedData.isTakeaway && packagingMaterial) {
           singleUnitCost += (packagingMaterial.costPerUnit || 0)
         }
@@ -149,18 +157,13 @@ export default defineEventHandler(async (event) => {
         
         createdSales.push(sale)
 
-        // Deduct Stock
+        // Deduct Stock Logic (Still needs updates but logic is clean)
         if (item.isRetail && item.materialId) {
-          // DIRECT SELL: Deduct from linked material 1:1
           const updatedMaterial = await tx.material.update({
             where: { id: item.materialId },
-            data: {
-              stock: {
-                decrement: itemRequest.qty
-              }
-            }
+            data: { stock: { decrement: itemRequest.qty } }
           })
-
+          
           await (tx as any).materialLog.create({
             data: {
               materialId: item.materialId,
@@ -172,18 +175,12 @@ export default defineEventHandler(async (event) => {
             }
           })
         } else if (item.recipes) {
-          // RECIPE BASED: Deduct using ingredients
           for (const recipeItem of item.recipes) {
-            const updatedMaterial = await tx.material.update({
+             const updatedMaterial = await tx.material.update({
               where: { id: recipeItem.materialId },
-              data: {
-                stock: {
-                  decrement: recipeItem.quantity * itemRequest.qty
-                }
-              }
+              data: { stock: { decrement: recipeItem.quantity * itemRequest.qty } }
             })
 
-            // Log movement
             await (tx as any).materialLog.create({
               data: {
                 materialId: recipeItem.materialId,
@@ -197,15 +194,10 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        // 3. Deduct Packaging Stock if Takeaway
         if (validatedData.isTakeaway && packagingMaterial) {
-          const updatedPkg = await tx.material.update({
+           const updatedPkg = await tx.material.update({
             where: { id: packagingMaterial.id },
-            data: {
-              stock: {
-                decrement: itemRequest.qty
-              }
-            }
+            data: { stock: { decrement: itemRequest.qty } }
           })
 
           await (tx as any).materialLog.create({

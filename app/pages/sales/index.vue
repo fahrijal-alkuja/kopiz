@@ -2,6 +2,20 @@
   <div>
     <h1>Transaksi Penjualan</h1>
     
+    <!-- SHIFT BLOCKER OVERLAY -->
+    <div v-if="!isShiftOpen" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+      <div style="text-align: center; background: var(--color-surface); padding: 2rem; border-radius: 1rem; border: 1px solid var(--color-danger); max-width: 400px;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🛑</div>
+        <h2 style="color: var(--color-danger); margin-bottom: 0.5rem;">Shift Belum Dibuka</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
+          Anda tidak dapat melakukan transaksi sebelum membuka shift kasir.
+        </p>
+        <NuxtLink to="/shifts" class="btn btn-primary" style="width: 100%; text-decoration: none; display: inline-block;">
+          Buka Shift Sekarang
+        </NuxtLink>
+      </div>
+    </div>
+
     <div class="pos-container">
       <!-- Main Content: Menu & History -->
       <div class="main-content">
@@ -242,7 +256,11 @@ import { useNetwork } from '@vueuse/core'
 import { db } from '~/utils/db'
 
 const { isOnline } = useNetwork()
-const { user } = useAuth()
+const { user, isOwner } = useAuth()
+
+// Shift Check
+const { data: activeShift } = await useFetch('/api/shifts/active')
+const isShiftOpen = computed(() => !!activeShift.value || isOwner.value) // Owner bypass or valid shift
 
 // Group Sales by Transaction ID for History List
 const groupedSales = computed(() => {

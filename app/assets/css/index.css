@@ -276,6 +276,8 @@ th {
   
   .grid-responsive { grid-template-columns: 1fr; }
   .pos-grid { grid-template-columns: 1fr !important; }
+  
+  .card { padding: 1rem; }
 }
 
 /* Mobile Landscape Optimization */
