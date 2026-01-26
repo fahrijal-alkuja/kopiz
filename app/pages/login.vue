@@ -3,7 +3,7 @@
     <div class="card login-card">
       <div style="text-align: center; margin-bottom: 2rem;">
         <img src="/logo.jpg" alt="Kopi Z" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--color-primary); margin-bottom: 1rem;">
-        <h1 style="margin: 0; color: var(--color-primary);">APPKOPZ</h1>
+        <h1 style="margin: 0; color: var(--color-primary);">KopiZ</h1>
         <p style="color: var(--color-text-muted);">
           {{ selectedUser ? `Halo, ${selectedUser.name}` : 'Pilih Akun' }}
         </p>
