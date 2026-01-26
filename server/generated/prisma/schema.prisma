@@ -101,12 +101,13 @@ model MaterialLog {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  pin       String
-  role      String
-  createdAt DateTime @default(now())
-  shifts    Shift[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  pin          String
+  role         String
+  createdAt    DateTime      @default(now())
+  shifts       Shift[]
+  activityLogs ActivityLog[]
 }
 
 model MaterialPurchase {
@@ -130,4 +131,16 @@ model Promo {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sales     Sale[]
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  action      String // LOGIN, CREATE, UPDATE, DELETE
+  entity      String // SALE, MENU, STOCK, SHIFT
+  entityId    String? // ID of the affected entity
+  description String? // Details "Deleted Kopi Susu"
+  metadata    Json? // Store previous values or diff
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id])
 }

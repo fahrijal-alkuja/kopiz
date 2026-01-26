@@ -1,4 +1,5 @@
 import prisma from '../../utils/db'
+import { getInventoryForecast } from '../../utils/inventory'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -69,8 +70,9 @@ export default defineEventHandler(async (event) => {
   })
 
   // --- ALERTS & SHIFTS ---
-  const allMaterials = await (prisma as any).material.findMany()
-  const lowStock = allMaterials.filter((m: any) => m.stock < m.minStock)
+  // --- ALERTS & SHIFTS ---
+  const forecast = await getInventoryForecast()
+  const lowStock = forecast.filter((m: any) => m.stock <= m.minStock || m.daysRemaining <= 3)
 
   const activeShift = await (prisma as any).shift.findFirst({
     where: { status: 'OPEN' }

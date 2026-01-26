@@ -2,6 +2,7 @@ import prisma from '../../utils/db'
 import { loginSchema } from '../../utils/schemas'
 import { generateAccessToken, generateRefreshToken } from '../../utils/jwt'
 import bcrypt from 'bcrypt'
+import { logActivity } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -56,6 +57,9 @@ export default defineEventHandler(async (event) => {
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 // 7 days
   })
+
+  // Log activity
+  await logActivity(validUser.id, 'LOGIN', 'USER', String(validUser.id), 'User logged in')
 
   return {
     accessToken,

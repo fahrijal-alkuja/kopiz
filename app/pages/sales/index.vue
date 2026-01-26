@@ -238,6 +238,10 @@ const { data: sales, refresh: refreshSales } = await useFetch('/api/sales', {
   query: { date: filterDate } // reactive query
 })
 
+import { useNetwork } from '@vueuse/core'
+import { db } from '~/utils/db'
+
+const { isOnline } = useNetwork()
 const { user } = useAuth()
 
 // Group Sales by Transaction ID for History List
@@ -403,16 +407,39 @@ async function submitTransaction() {
   const currentPayment = paymentMethod.value
 
   try {
-    const response = await $fetch('/api/sales', {
-      method: 'POST',
-      body: {
+    let response = []
+    
+    if (isOnline.value) {
+      response = await $fetch('/api/sales', {
+        method: 'POST',
+        body: {
+          items: cart.value.map(i => ({ menuItemId: i.menuItemId, qty: i.qty })),
+          paymentMethod: paymentMethod.value,
+          isTakeaway: isTakeaway.value,
+          promoId: selectedPromo.value?.id,
+          discountAmount: discountAmount.value
+        }
+      })
+    } else {
+      // Offline Mode
+      const offlineId = await db.offlineSales.add({
         items: cart.value.map(i => ({ menuItemId: i.menuItemId, qty: i.qty })),
         paymentMethod: paymentMethod.value,
-        isTakeaway: isTakeaway.value,
-        promoId: selectedPromo.value?.id,
-        discountAmount: discountAmount.value
-      }
-    })
+        total: Math.max(0, currentTotal - currentDiscount),
+        createdAt: new Date(),
+        synced: 0
+      })
+      
+      // Mock response for printing
+      response = [{
+        transactionId: `OFFLINE-${offlineId}`,
+        total: Math.max(0, currentTotal - currentDiscount),
+        paymentMethod: currentPayment,
+        date: new Date()
+      }]
+      
+      showAlert('Offline Mode', 'Transaksi disimpan di perangkat. Akan disinkronisasi saat online.')
+    }
     
     // Auto Print
     if (isAutoPrint.value && response && response.length > 0) {
@@ -437,7 +464,7 @@ async function submitTransaction() {
     isTakeaway.value = false
     selectedPromo.value = null
     showCartDrawer.value = false
-    refreshSales()
+    if (isOnline.value) refreshSales()
   } catch (e) {
     showAlert('Error', e.message)
   }

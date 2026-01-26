@@ -19,6 +19,9 @@
             <div v-for="m in data.lowStock" :key="m.id" style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; border: 1px solid hsla(0, 72%, 51%, 0.2);">
               <div style="font-size: 0.8rem; color: var(--color-text-muted);">{{ m.name }}</div>
               <div style="font-weight: bold; color: var(--color-danger);">Sisa {{ m.stock }} {{ m.unit }}</div>
+              <div v-if="m.daysRemaining !== undefined && m.daysRemaining < 30" style="font-size: 0.75rem; color: var(--color-warning); margin-top: 2px;">
+                Est. Habis: {{ m.daysRemaining }} hari
+              </div>
             </div>
           </div>
         </div>

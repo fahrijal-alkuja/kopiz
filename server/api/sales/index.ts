@@ -1,9 +1,11 @@
 import prisma from '../../utils/db'
 import { createSaleSchema, updateSaleSchema } from '../../utils/schemas'
+import { logActivity } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   const method = event.method
   const query = getQuery(event)
+  const user = event.context.user
 
   if (method === 'GET') {
     // Filter by date (defaults to today)
@@ -222,6 +224,10 @@ export default defineEventHandler(async (event) => {
       return createdSales
     })
 
+    if (user && user.userId) {
+      await logActivity(user.userId, 'CREATE', 'SALE', transactionId, `Created Sale #${transactionId}`)
+    }
+
     return result
   }
 
@@ -281,6 +287,10 @@ export default defineEventHandler(async (event) => {
       return { success: true }
     }
 
+    if (user && user.userId) {
+      await logActivity(user.userId, 'DELETE', 'SALE', body.transactionId, `Deleted Transaction #${body.transactionId}`)
+    }
+
     // Handle Single Item Delete (Legacy or specific)
     const saleId = parseInt(body.id)
     const sale = await (prisma as any).sale.findUnique({
@@ -328,6 +338,10 @@ export default defineEventHandler(async (event) => {
         where: { id: saleId }
       })
     })
+
+    if (user && user.userId) {
+      await logActivity(user.userId, 'DELETE', 'SALE', String(saleId), `Deleted Sale #${saleId}`)
+    }
 
     return { success: true }
   }
@@ -427,6 +441,10 @@ export default defineEventHandler(async (event) => {
         }
       })
     })
+
+    if (user && user.userId) {
+      await logActivity(user.userId, 'UPDATE', 'SALE', String(saleId), `Updated Sale #${saleId}`)
+    }
 
     return { success: true }
   }

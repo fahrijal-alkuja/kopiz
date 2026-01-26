@@ -1,5 +1,52 @@
 <script setup>
+import { useNetwork } from '@vueuse/core'
+import { db } from '~/utils/db'
+
 const { user, logout, isOwner } = useAuth()
+const { isOnline } = useNetwork()
+const pendingSyncCount = ref(0)
+const isSyncing = ref(false)
+
+// Check pending on load
+onMounted(async () => {
+  pendingSyncCount.value = await db.offlineSales.where('synced').equals(0).count()
+})
+
+// Auto-sync when online
+watch(isOnline, async (online) => {
+  if (online) {
+    await syncOfflineSales()
+  }
+})
+
+async function syncOfflineSales() {
+  const pending = await db.offlineSales.toArray()
+  if (pending.length === 0) return
+
+  isSyncing.value = true
+  try {
+    for (const sale of pending) {
+      await $fetch('/api/sales', {
+        method: 'POST',
+        body: {
+          items: sale.items,
+          paymentMethod: sale.paymentMethod,
+          isTakeaway: false,
+          promoId: null,
+          discountAmount: 0,
+          date: sale.createdAt
+        }
+      })
+      await db.offlineSales.delete(sale.id)
+    }
+    pendingSyncCount.value = 0
+    alert('Data offline berhasil disinkronisasi!')
+  } catch (e) {
+    console.error('Sync failed', e)
+  } finally {
+    isSyncing.value = false
+  }
+}
 </script>
 
 <template>
@@ -14,6 +61,14 @@ const { user, logout, isOwner } = useAuth()
         <div style="font-weight: bold;">{{ user.name }} ({{ user.role }})</div>
       </div>
 
+      <!-- Network Status -->
+      <div v-if="!isOnline" style="margin-bottom: 1rem; padding: 0.5rem; background: var(--color-danger); color: white; text-align: center; border-radius: 4px; font-weight: bold;">
+        📡 OFFLINE MODE
+      </div>
+      <div v-else-if="pendingSyncCount > 0" style="margin-bottom: 1rem; padding: 0.5rem; background: var(--color-warning); color: black; text-align: center; border-radius: 4px; font-weight: bold; cursor: pointer;" @click="syncOfflineSales">
+        🔄 {{ isSyncing ? 'Syncing...' : `Sync ${pendingSyncCount} Data` }}
+      </div>
+
       <nav style="flex: 1; overflow-y: auto;">
         <ul style="list-style: none; padding: 0;">
           <li><NuxtLink to="/" class="nav-link">🏠 Dashboard</NuxtLink></li>
@@ -25,6 +80,13 @@ const { user, logout, isOwner } = useAuth()
           <li v-if="isOwner"><NuxtLink to="/menu" class="nav-link">☕ Master Menu</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/promo" class="nav-link">🏷️ Manajemen Promo</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/users" class="nav-link">👥 Manajemen Barista</NuxtLink></li>
+          
+          <!-- New Admin Links -->
+          <li v-if="isOwner" style="margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem;">
+            <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 0.5rem; padding-left: 1rem;">SYSTEM</div>
+            <NuxtLink to="/admin/audit" class="nav-link">📜 Audit Logs</NuxtLink>
+            <NuxtLink to="/admin/backups" class="nav-link">💾 Backups</NuxtLink>
+          </li>
         </ul>
       </nav>
 

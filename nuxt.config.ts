@@ -28,14 +28,35 @@ export default defineNuxtConfig({
         }
       ]
     },
-    workbox: {
-      navigateFallback: '/',
-      globPatterns: [] // Disable automatic globbing in dev to stop warnings
-    },
     devOptions: {
       enabled: true,
+      type: 'module',
       suppressWarnings: true,
-      type: 'module'
+    },
+    workbox: {
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      runtimeCaching: [
+        {
+          urlPattern: '/api/menu',
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'menu-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 // 1 day
+            }
+          }
+        },
+        {
+          urlPattern: '/api/inventory/status',
+          handler: 'NetworkFirst',
+          options: {
+             networkTimeoutSeconds: 3,
+             cacheName: 'inventory-cache'
+          }
+        } 
+      ]
     }
   },
   vite: {
