@@ -28,15 +28,16 @@
           <span>Total</span>
           <span class="total-amount">{{ formatCurrency(transaction.total) }}</span>
         </div>
+        
         <div class="row">
           <span>Bayar ({{ transaction.paymentMethod }})</span>
-          <span>{{ formatCurrency(transaction.total) }}</span>
+          <span>{{ transaction.cashProvided ? formatCurrency(transaction.cashProvided) : formatCurrency(transaction.total) }}</span>
         </div>
-        <!-- If change logic exists -->
-        <!-- <div class="row">
+        
+        <div class="row" v-if="transaction.change >= 0">
           <span>Kembali</span>
-          <span>{{ formatCurrency(0) }}</span>
-        </div> -->
+          <span>{{ formatCurrency(transaction.change || 0) }}</span>
+        </div>
         <div class="sperator">================================</div>
       </div>
 

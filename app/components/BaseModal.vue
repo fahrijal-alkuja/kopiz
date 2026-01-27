@@ -2,7 +2,7 @@
   <Transition name="fade">
     <div v-if="show" class="modal-backdrop" @click.self="handleCancel">
       <Transition name="zoom">
-        <div v-if="show" class="modal-content card">
+        <div v-if="show" class="modal-content card" :style="{ maxWidth: maxWidth }">
           <div class="modal-header">
             <h3>{{ title }}</h3>
             <button class="close-btn" @click="handleCancel">&times;</button>
@@ -12,6 +12,9 @@
             <slot />
           </div>
           <div class="modal-footer">
+            <div style="flex: 1; text-align: left;">
+              <slot name="footer-left" />
+            </div>
             <button v-if="showCancel" class="btn btn-secondary" @click="handleCancel">
               {{ cancelText }}
             </button>
@@ -33,7 +36,8 @@ const props = defineProps({
   confirmText: { type: String, default: 'Ya, Lanjutkan' },
   cancelText: { type: String, default: 'Batal' },
   showCancel: { type: Boolean, default: true },
-  confirmClass: { type: String, default: 'btn-primary' }
+  confirmClass: { type: String, default: 'btn-primary' },
+  maxWidth: { type: String, default: '450px' }
 })
 
 const emit = defineEmits(['confirm', 'cancel', 'update:show'])
