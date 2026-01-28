@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
-      <h1>Dashboard & Laporan</h1>
+    <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; padding: 0 1.25rem;">
+      <h1 style="padding-left: 0;">Dashboard & Laporan</h1>
       <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <input type="date" v-model="filterDate" class="input" style="width: auto; margin: 0;">
         <a :href="`/api/reports/monthly_csv?date=${filterDate}`" download class="btn" style="background: var(--color-success); text-decoration: none;">Unduh Laporan (CSV)</a>

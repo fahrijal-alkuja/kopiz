@@ -252,15 +252,23 @@ th {
     border-bottom: 1px solid var(--glass-border);
     padding: 0.75rem;
     flex-direction: column;
+    position: relative; /* Unlock from sticky on mobile */
   }
   .sidebar-logo, .user-info, .logout-btn { display: none; }
-  .main-content { padding: 1.5rem 1rem; }
+  
+  /* Mobile First: Full Width Content */
+  .main-content { 
+    padding: 0; 
+    overflow-x: hidden;
+  }
   
   nav ul {
     display: flex;
     overflow-x: auto;
     gap: 0.5rem;
     padding-bottom: 0.5rem;
+    padding-left: 1rem; /* Add some safe padding for scroll start */
+    padding-right: 1rem;
     scrollbar-width: none;
   }
   nav ul::-webkit-scrollbar { display: none; }
@@ -277,7 +285,25 @@ th {
   .grid-responsive { grid-template-columns: 1fr; }
   .pos-grid { grid-template-columns: 1fr !important; }
   
-  .card { padding: 1rem; }
+  /* Full width cards on mobile */
+  .card { 
+    padding: 1.25rem; 
+    border-radius: 0; 
+    border-left: none; 
+    border-right: none; 
+    box-shadow: none; 
+    margin-bottom: 1rem;
+    background: rgba(17, 24, 39, 0.7); /* Slightly darker/more opaque for readability */
+  }
+  
+  /* Give slight separation if needed, or keep flush */
+  section {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  h1, h2, h3 {
+    padding: 0 1.25rem; /* Add padding to headers since main-content has 0 */
+  }
 }
 
 /* Mobile Landscape Optimization */

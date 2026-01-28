@@ -12,15 +12,18 @@
             <slot />
           </div>
           <div class="modal-footer">
-            <div style="flex: 1; text-align: left;">
-              <slot name="footer-left" />
-            </div>
-            <button v-if="showCancel" class="btn btn-secondary" @click="handleCancel">
-              {{ cancelText }}
-            </button>
-            <button :class="['btn', confirmClass]" @click="handleConfirm">
-              {{ confirmText }}
-            </button>
+            <slot name="footer" v-if="$slots.footer" />
+            <template v-else>
+              <div style="flex: 1; text-align: left;">
+                <slot name="footer-left" />
+              </div>
+              <button v-if="showCancel" class="btn btn-secondary" @click="handleCancel">
+                {{ cancelText }}
+              </button>
+              <button :class="['btn', confirmClass]" @click="handleConfirm">
+                {{ confirmText }}
+              </button>
+            </template>
           </div>
         </div>
       </Transition>

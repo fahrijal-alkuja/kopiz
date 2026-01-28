@@ -112,171 +112,141 @@
     <BaseModal
       v-model:show="showCartDrawer"
       title="Konfirmasi Pesanan"
-      :show-cancel="true"
-      confirm-text="Bayar & Simpan"
-      max-width="800px"
-      @confirm="submitTransaction"
+      :show-cancel="false"
+      max-width="500px"
     >
-        <!-- Items Table -->
-        <div class="table-container" style="max-height: 40vh; overflow-y: auto; margin-bottom: 1.5rem;">
-          <table style="width: 100%; font-size: 0.95rem;">
-            <thead style="position: sticky; top: 0; background: var(--color-surface); z-index: 10;">
-              <tr style="border-bottom: 1px solid var(--color-border);">
-                <th style="padding: 0.75rem 0; text-align: left;">Item</th>
-                <th style="padding: 0.75rem 0; text-align: center;">Qty</th>
-                <th style="padding: 0.75rem 0; text-align: right;">Total</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, index) in cart" :key="index" style="border-bottom: 1px dashed var(--color-border);">
-                <td style="padding: 0.75rem 0; font-weight: 500;">
-                  {{ item.name }}
-                  <div style="font-size: 0.75rem; color: var(--color-text-muted);">@ {{ item.price.toLocaleString() }}</div>
-                </td>
-                <td style="padding: 0.75rem 0; text-align: center;">
-                  <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <button @click="adjustQty(index, -1)" class="qty-btn">-</button>
-                    <span>{{ item.qty }}</span>
-                    <button @click="adjustQty(index, 1)" class="qty-btn">+</button>
-                  </div>
-                </td>
-                <td style="padding: 0.75rem 0; text-align: right;">{{ item.total.toLocaleString() }}</td>
-                <td style="padding: 0.75rem 0; text-align: right;">
-                  <button @click="removeFromCart(index)" style="color: var(--color-danger); background: none; border: none; cursor:pointer; font-size: 1.5rem; padding: 10px; line-height: 1;">&times;</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- TOTAL BILL AT TOP -->
+        <div style="margin-bottom: 2rem;">
+          <label style="font-size: 0.85rem; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem;">Total Tagihan</label>
+          <div style="font-size: 2.5rem; font-weight: 800; color: white; display:flex; align-items: baseline;">
+            <span style="font-size: 1.5rem; color: var(--color-primary); margin-right: 0.5rem;">Rp</span>
+            {{ Math.max(0, cartTotal - discountAmount).toLocaleString('id-ID') }}
+          </div>
+          <div v-if="discountAmount > 0" style="color: var(--color-success); font-size: 0.9rem; margin-top: 0.25rem;">
+            Hemat Rp {{ discountAmount.toLocaleString('id-ID') }}
+          </div>
         </div>
 
-        <!-- Payment Method Selection -->
-        <div style="background: var(--color-bg); padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 1.5rem; border: 1px solid var(--glass-border);">
-          <label style="font-size: 0.85rem; color: var(--color-text-muted); display: block; margin-bottom: 0.75rem; font-weight: 600;">METODE PEMBAYARAN</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <button 
-              type="button"
-              @click="paymentMethod = 'Cash'" 
-              :class="['payment-btn', { active: paymentMethod === 'Cash' }]"
-              style="padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); cursor: pointer; font-weight: 600;"
-            >💵 Cash</button>
-            <button 
-              type="button"
-              @click="paymentMethod = 'QRIS'" 
-              :class="['payment-btn', { active: paymentMethod === 'QRIS' }]"
-              style="padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); cursor: pointer; font-weight: 600;"
-            >📱 QRIS</button>
+        <!-- PAYMENT METHOD -->
+        <div style="margin-bottom: 2rem;">
+          <label style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 1rem; letter-spacing: 0.05em; text-transform: uppercase;">Metode Pembayaran</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+             <button 
+               type="button"
+               @click="paymentMethod = 'Cash'" 
+               :class="['payment-btn', { active: paymentMethod === 'Cash' }]"
+             >
+               <span style="font-size: 1.25rem; margin-right: 0.5rem;">💵</span> 
+               <span>Tunai</span>
+             </button>
+             <button 
+               type="button"
+               @click="paymentMethod = 'QRIS'" 
+               :class="['payment-btn', { active: paymentMethod === 'QRIS' }]"
+             >
+               <span style="font-size: 1.25rem; margin-right: 0.5rem;">📱</span>
+               <span>QRIS</span>
+             </button>
           </div>
-          
-            <!-- Cash Input Section -->
-            <div v-if="paymentMethod === 'Cash'" style="margin-top: 1rem; background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--glass-border);">
-              <label style="display: block; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500;">Nominal Tunai</label>
-              
-              <div class="input-group" style="display: flex; align-items: center; margin-bottom: 1rem; background: var(--color-bg); border: 2px solid var(--color-primary); border-radius: 0.5rem; overflow: hidden; height: 50px;">
-                <span style="padding: 0 1rem; color: var(--color-primary); font-weight: bold; background: rgba(59, 130, 246, 0.1); height: 100%; display: flex; align-items: center;">Rp</span>
-                <input 
-                  type="text" 
-                  :value="formatCurrencyInput(cashAmount)" 
-                  @input="onCashInput"
-                  class="input-clean" 
-                  placeholder="0"
-                  style="flex: 1; border: none; background: transparent; color: white; padding: 0 1rem; font-size: 1.25rem; font-weight: bold; outline: none; height: 100%;"
-                >
-              </div>
-              
-              <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1.25rem;">
-                <button @click="setCash('exact')" class="btn-quick">Uang Pas</button>
-                <button @click="setCash(10000)" class="btn-quick">10rb</button>
-                <button @click="setCash(20000)" class="btn-quick">20rb</button>
-                <button @click="setCash(50000)" class="btn-quick">50rb</button>
-                <button @click="setCash(100000)" class="btn-quick">100rb</button>
-              </div>
+        </div>
 
-              <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--color-text-muted);">Kembalian</span>
-                <span style="font-weight: 800; font-size: 1.4rem; color: var(--color-warning);">Rp {{ change.toLocaleString('id-ID') }}</span>
-              </div>
-               <div v-if="cashAmount < (cartTotal - discountAmount)" style="color: var(--color-danger); font-size: 0.85rem; margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
-                  <span>⚠️</span> Nominal kurang dari total tagihan
+        <!-- CASH INPUT & GRID -->
+        <Transition name="fade">
+          <div v-if="paymentMethod === 'Cash'" style="background: rgba(255,255,255,0.02); border-radius: 1.25rem; padding: 1.5rem; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+            
+            <!-- Input Field -->
+             <div class="input-group-lg" :class="{ 'error-border': cashAmount < (cartTotal - discountAmount) && cashAmount > 0 }">
+               <span class="currency-prefix">Rp</span>
+               <input 
+                 type="text" 
+                 :value="formatCurrencyInput(cashAmount)" 
+                 @input="onCashInput"
+                 class="input-lg" 
+                 placeholder="0"
+               >
+             </div>
+
+             <!-- Quick Cash Grid -->
+             <div class="cash-grid">
+               <button @click="setCash('exact')" class="btn-cash-quick accent">Uang Pas</button>
+               <button @click="setCash(10000)" class="btn-cash-quick">10rb</button>
+               <button @click="setCash(20000)" class="btn-cash-quick">20rb</button>
+               <button @click="setCash(50000)" class="btn-cash-quick">50rb</button>
+               <button @click="setCash(100000)" class="btn-cash-quick">100rb</button>
+             </div>
+             
+             <!-- Kembalian Display (Only if enough cash) -->
+             <Transition name="fade">
+               <div v-if="change > 0" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                 <span style="color: var(--color-text-muted);">Kembalian</span>
+                 <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-warning);">Rp {{ change.toLocaleString('id-ID') }}</span>
                </div>
-            </div>
-            <!-- Controls: Auto Print & Takeaway -->
-            <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--glass-border);">
-              <!-- Auto Print -->
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="autoprint" v-model="isAutoPrint" style="width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer;">
-                <label for="autoprint" style="cursor: pointer; color: var(--color-text); font-size: 0.85rem; font-weight: 500;">Cetak Struk</label>
-              </div>
-
-              <div style="width: 1px; height: 20px; background: var(--color-border);"></div>
-
-              <!-- Takeaway Toggle -->
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                 <label style="font-size: 0.85rem; color: var(--color-text); font-weight: 500;">Takeaway?</label>
-                 <div @click="isTakeaway = !isTakeaway" :style="{ background: isTakeaway ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)' }" style="width: 40px; height: 22px; border-radius: 11px; cursor: pointer; position: relative; transition: background 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
-                   <div :style="{ left: isTakeaway ? '20px' : '2px' }" style="position: absolute; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: all 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
-                 </div>
-              </div>
-            </div>
-        </div>
-
-        <!-- Promo Selection -->
-        <div v-if="promos && promos.length > 0" style="margin-bottom: 1.5rem; padding: 1.25rem; background: rgba(59, 130, 246, 0.05); border-radius: 0.75rem; border: 1px solid rgba(59, 130, 246, 0.1);">
-          <div style="font-weight: 600; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.85rem; color: var(--color-primary);">PILIH PROMO</span>
-            <span v-if="selectedPromo" @click="selectedPromo = null" style="color: var(--color-danger); font-size: 0.75rem; cursor: pointer; background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 4px;">Hapus</span>
+             </Transition>
           </div>
-          <div style="display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: none;">
-            <div 
-              v-for="p in promos.filter(p => p.isActive)" :key="p.id"
-              @click="selectedPromo = p"
-              :style="{ 
-                border: selectedPromo?.id === p.id ? '2px solid var(--color-primary)' : '1px solid var(--glass-border)', 
-                background: selectedPromo?.id === p.id ? 'var(--color-primary-glow)' : 'rgba(255,255,255,0.05)',
-                transform: selectedPromo?.id === p.id ? 'scale(1.02)' : 'scale(1)'
-              }"
-              style="padding: 0.75rem 1rem; border-radius: 0.75rem; cursor: pointer; white-space: nowrap; min-width: 140px; transition: all 0.2s;"
-            >
-              <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 2px;">{{ p.name }}</div>
-              <div style="font-size: 0.8rem; color: var(--color-text-muted);">{{ p.type === 'PERCENT' ? '-' + p.value + '%' : '-Rp ' + p.value.toLocaleString('id-ID') }}</div>
-            </div>
-          </div>
-        </div>
+        </Transition>
 
-        <!-- Order Summary -->
-        <div style="margin-bottom: 0.5rem; padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02);">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span style="color: var(--color-text-muted);">Subtotal</span>
-            <span style="font-weight: 500;">Rp {{ cartTotal.toLocaleString('id-ID') }}</span>
-          </div>
-          <div v-if="discountAmount > 0" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--color-danger); font-weight: 600;">
-            <span>Potongan ({{ selectedPromo?.name }})</span>
-            <span>-Rp {{ discountAmount.toLocaleString('id-ID') }}</span>
-          </div>
-          <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 0.75rem 0;">
-          <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.25rem;">
-            <span>TOTAL BAYAR</span>
-            <span class="text-success">Rp {{ Math.max(0, cartTotal - discountAmount).toLocaleString('id-ID') }}</span>
-          </div>
-        </div>
-
-        <!-- Removed Takeaway Toggle Block -->
-        
-        <!-- Empty Cart Button Moved to Footer -->
-          
-      <template #footer-left>
-        <div style="display: flex; align-items: center;">
-           <button @click="cancelCart" class="btn-icon-danger" title="Kosongkan Keranjang">
-             🗑️
-           </button>
-           
-           <div style="width: 1px; height: 32px; background: var(--color-border); margin: 0 1rem;"></div>
-           
-           <div style="display: flex; flex-direction: column; line-height: 1.2;">
-             <div v-if="discountAmount > 0" style="font-size: 0.75rem; color: var(--color-success); font-weight: 600;">Hemat Rp {{ discountAmount.toLocaleString('id-ID') }}</div>
-             <div style="font-size: 0.8rem; color: var(--color-text-muted);">Total Bayar</div>
-             <div class="text-primary" style="font-size: 1.4rem; font-weight: 800;">Rp {{ Math.max(0, cartTotal - discountAmount).toLocaleString('id-ID') }}</div>
+        <!-- ITEMS PREVIEW (Collapsible or Small) -->
+        <div style="margin-bottom: 1rem;">
+           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0;">
+             <div @click="showItemsDetail = !showItemsDetail" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <span style="font-size: 0.9rem;">Rincian Pesanan ({{ cartTotalQty }} Item)</span>
+                <span :style="{ transform: showItemsDetail ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }" style="font-size: 0.8rem;">›</span>
+             </div>
+             <button @click="cancelCart" style="background: none; border: none; color: var(--color-danger); font-size: 0.8rem; cursor: pointer; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px;">
+               <span>🗑️</span> Hapus Semua
+             </button>
            </div>
+           
+           <Transition name="fade">
+             <div v-if="showItemsDetail" style="margin-top: 0.5rem; max-height: 250px; overflow-y: auto; font-size: 0.9rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.75rem;">
+                <div v-for="(item, index) in cart" :key="index" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--glass-border);">
+                  <div style="flex: 1;">
+                    <div style="font-weight: 500;">{{ item.name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">@ {{ item.price.toLocaleString() }}</div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <!-- Quantity Controls -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 2px;">
+                      <button @click="adjustQty(index, -1)" style="width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem;">-</button>
+                      <span style="font-weight: 600; min-width: 16px; text-align: center;">{{ item.qty }}</span>
+                      <button @click="adjustQty(index, 1)" style="width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem;">+</button>
+                    </div>
+                    
+                    <div style="width: 80px; text-align: right; font-weight: 600;">{{ item.total.toLocaleString() }}</div>
+                  </div>
+                </div>
+             </div>
+           </Transition>
+        </div>
+        
+        <!-- Controls -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+           <div class="toggle-wrapper">
+              <label>Cetak Struk</label>
+              <input type="checkbox" v-model="isAutoPrint" class="toggle-input">
+           </div>
+           <div class="toggle-wrapper">
+              <label>Takeaway</label>
+              <input type="checkbox" v-model="isTakeaway" class="toggle-input">
+           </div>
+        </div>
+
+      <template #footer>
+        <div style="display: flex; gap: 1rem; width: 100%;">
+           <button @click="showCartDrawer = false" class="btn-footer-secondary">
+             Batal
+           </button>
+           <button 
+             @click="submitTransaction" 
+             class="btn-footer-primary"
+             :disabled="paymentMethod === 'Cash' && cashAmount < (cartTotal - discountAmount)"
+           >
+             <div>Bayar & Simpan</div>
+             <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.8;">
+               {{ paymentMethod === 'Cash' ? (change > 0 ? 'Kembalian Rp ' + change.toLocaleString('id-ID') : 'Uang Pas') : 'QRIS / Digital' }}
+             </div>
+           </button>
         </div>
       </template>
     </BaseModal>
@@ -430,6 +400,7 @@ const isAutoPrint = ref(true)
 const selectedPromo = ref(null)
 const { data: promos } = await useFetch('/api/promo')
 const showCartDrawer = ref(false)
+const showItemsDetail = ref(false)
 
 // CASH & CHANGE LOGIC
 const cashAmount = ref(0)
@@ -796,6 +767,133 @@ function findMenuIdByName(name) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* Redesigned Modal Styles */
+.input-group-lg {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary);
+  border-radius: 1rem;
+  overflow: hidden;
+  height: 64px;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+.input-group-lg.error-border {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.currency-prefix {
+  padding: 0 1.5rem;
+  color: var(--color-primary);
+  font-weight: 800;
+  font-size: 1.25rem;
+  background: rgba(59, 130, 246, 0.1);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.input-group-lg.error-border .currency-prefix {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+.input-lg {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: white;
+  padding: 0 1.5rem;
+  font-size: 1.75rem;
+  font-weight: bold;
+  outline: none;
+  height: 100%;
+  width: 100%;
+}
+
+.cash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.btn-cash-quick {
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.btn-cash-quick:active {
+  transform: scale(0.95);
+  background: rgba(255,255,255,0.1);
+}
+
+.btn-cash-quick.accent {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--color-primary);
+}
+
+.btn-footer-primary {
+  flex: 2;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  padding: 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px var(--color-primary-glow);
+  transition: all 0.2s;
+}
+
+.btn-footer-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.btn-footer-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-footer-secondary {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-muted);
+  border-radius: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.toggle-input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
 }
 
 .qty-btn:hover {
