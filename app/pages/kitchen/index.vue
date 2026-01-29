@@ -2,10 +2,15 @@
   <div class="kitchen-view">
     <div class="header">
       <h1>🧑‍🍳 Kitchen Display System</h1>
-      <div class="clock">{{ currentTime }}</div>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <button @click="toggleAudio" class="btn-icon" :class="{ 'active': audioEnabled }" title="Sound Alert">
+          {{ audioEnabled ? '🔊 On' : '🔇 Off' }}
+        </button>
+        <div class="clock">{{ currentTime }}</div>
+      </div>
     </div>
 
-    <div v-if="pendingOrders.length === 0 && processOrders.length === 0" class="empty-state">
+    <div v-if="pendingOrders.length === 0 && processOrders.length === 0 && readyOrders.length === 0" class="empty-state">
       <div style="font-size: 3rem;">😴</div>
       <h2>Tidak ada pesanan aktif</h2>
       <p>Santai sejenak sambil menunggu pesanan baru.</p>
@@ -18,7 +23,7 @@
           <h2>Baru Masuk ({{ pendingOrders.length }})</h2>
         </div>
         <div class="order-list">
-          <div v-for="order in pendingOrders" :key="order.id" class="order-card pending-card">
+          <div v-for="order in pendingOrders" :key="order.id" class="order-card pending-card" :class="{ 'late-warning': isLate(order.createdAt) }">
             <div class="card-header">
               <span class="table-badge">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
               <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
@@ -48,7 +53,7 @@
           <h2>Sedang Disiapkan ({{ processOrders.length }})</h2>
         </div>
         <div class="order-list">
-          <div v-for="order in processOrders" :key="order.id" class="order-card process-card">
+          <div v-for="order in processOrders" :key="order.id" class="order-card process-card" :class="{ 'late-warning': isLate(order.createdAt) }">
             <div class="card-header">
               <span class="table-badge process">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
               <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
@@ -71,6 +76,37 @@
           </div>
         </div>
       </div>
+
+       <!-- READY COLUMN (NEW) -->
+       <div class="column">
+        <div class="column-header ready">
+          <h2>Siap Saji ({{ readyOrders.length }})</h2>
+        </div>
+        <div class="order-list">
+          <div v-for="order in readyOrders" :key="order.id" class="order-card ready-card">
+            <div class="card-header">
+              <span class="table-badge ready">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
+              <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
+            </div>
+            <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
+             <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
+            
+            <div class="items-list">
+              <div v-for="sale in order.sales" :key="sale.id" class="order-item">
+                <span class="qty">{{ sale.qty }}x</span>
+                <span class="name">{{ sale.menuItem.name }}</span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button @click="updateStatus(order.id, 'COMPLETED')" class="btn btn-complete">
+                Tutup / Serve 👍
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -78,10 +114,38 @@
 <script setup>
 import { useIntervalFn, useNow, useDateFormat } from '@vueuse/core'
 
+// SOUND: Ding Sound (Base64)
+const dingSound = 'data:audio/mp3;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAG84AA0WAgAAAAAA9GP/7H3/8z//f/////3//9//+////9//3//7//7/////9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9'
+const audioEnabled = ref(false)
+
+function toggleAudio() {
+  audioEnabled.value = !audioEnabled.value
+  if (audioEnabled.value) {
+    // Play silent to request permission
+    new Audio(dingSound).play().catch(() => {})
+  }
+}
+
+// Data Fetching
 const { data: orders, refresh } = await useFetch('/api/orders', {
-  query: { status: 'PENDING,PROCESS', limit: 50 },
-  key: 'kitchen-orders' // Unique key to prevent caching conflicts
+  query: { status: 'PENDING,PROCESS,READY', limit: 50 },
+  key: 'kitchen-orders' 
 })
+
+// Audio Logic: Watch for New Orders
+const lastPendingCount = ref(0) // Track last count
+
+watch(orders, (newVal) => {
+  const pendingCount = newVal?.filter(o => o.status === 'PENDING').length || 0
+  
+  // If pending count INCREASED, play sound
+  if (pendingCount > lastPendingCount.value && audioEnabled.value) {
+      new Audio(dingSound).play().catch(e => console.log('Audio blocked', e))
+  }
+  
+  lastPendingCount.value = pendingCount
+}, { deep: true })
+
 
 // Auto refresh every 10 seconds
 useIntervalFn(() => {
@@ -98,10 +162,19 @@ const processOrders = computed(() =>
   orders.value?.filter(o => o.status === 'PROCESS') || []
 )
 
+const readyOrders = computed(() => 
+  orders.value?.filter(o => o.status === 'READY') || []
+)
+
 function timeAgo(date) {
   const diff = (new Date() - new Date(date)) / 1000 / 60
   if (diff < 1) return 'Baru saja'
   return `${Math.floor(diff)} menit lalu`
+}
+
+function isLate(date) {
+  const diff = (new Date() - new Date(date)) / 1000 / 60
+  return diff > 15
 }
 
 async function updateStatus(id, newStatus) {
@@ -153,8 +226,8 @@ definePageMeta({
 
 .kanban-board {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: 1fr 1fr 1fr; /* 3 Columns */
+  gap: 1.5rem;
   flex: 1;
   overflow: hidden; 
 }
@@ -176,6 +249,7 @@ definePageMeta({
 
 .column-header.pending h2 { color: var(--color-warning); margin: 0; font-size: 1.2rem; }
 .column-header.process h2 { color: var(--color-primary); margin: 0; font-size: 1.2rem; }
+.column-header.ready h2 { color: var(--color-success); margin: 0; font-size: 1.2rem; }
 
 .order-list {
   padding: 1rem;
@@ -193,10 +267,25 @@ definePageMeta({
   border: 1px solid var(--color-border);
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   animation: slideIn 0.3s ease-out;
+  transition: all 0.3s;
+}
+
+/* LATE WARNING STYLE */
+.late-warning {
+  border: 2px solid var(--color-danger);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .pending-card { border-left: 4px solid var(--color-warning); }
 .process-card { border-left: 4px solid var(--color-primary); }
+.ready-card { border-left: 4px solid var(--color-success); border-right: 1px solid var(--color-success); }
 
 .card-header {
   display: flex;
@@ -212,6 +301,9 @@ definePageMeta({
   font-weight: bold;
   font-size: 0.85rem;
 }
+
+.table-badge.process { background: rgba(59, 130, 246, 0.1); color: var(--color-primary); }
+.table-badge.ready { background: rgba(16, 185, 129, 0.1); color: var(--color-success); }
 
 .time-ago {
   font-size: 0.8rem;
@@ -270,14 +362,50 @@ definePageMeta({
   color: white;
 }
 
+.btn-complete {
+    background: transparent;
+    border: 2px solid var(--color-text-muted);
+    color: var(--color-text-muted);
+}
+.btn-complete:hover {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
 .empty-state {
   text-align: center;
   padding: 4rem;
   color: var(--color-text-muted);
 }
 
+.btn-icon {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-icon.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+    .kanban-board {
+        grid-template-columns: 1fr; /* Stack on mobile */
+        overflow-y: auto;
+    }
+    .kitchen-view {
+        height: auto;
+        min-height: 100vh;
+    }
 }
 </style>

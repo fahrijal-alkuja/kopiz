@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   })
 
   if (!order) throw createError({ statusCode: 404, statusMessage: 'Order not found' })
-  if (order.status === 'COMPLETED' || order.paymentMethod !== 'PAY_LATER') {
+  if (order.paymentMethod !== 'PAY_LATER') {
      throw createError({ statusCode: 400, statusMessage: 'Order already paid or invalid state' })
   }
 

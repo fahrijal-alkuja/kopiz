@@ -516,7 +516,7 @@ const { data: sales, refresh: refreshSales } = await useFetch('/api/sales', {
 
 // === UNPAID ORDERS (OPEN BILLS) ===
 const { data: unpaidOrdersRaw, refresh: refreshUnpaid } = await useFetch('/api/orders', {
-    query: { status: 'PENDING,PROCESS,READY', limit: 100 }
+    query: { status: 'PENDING,PROCESS,READY,COMPLETED', limit: 100 }
 })
 // Filter only PAY_LATER locally (since API filter logic might iterate status only? 
 // Actually current API only filters status. Let's filter client side for now.
