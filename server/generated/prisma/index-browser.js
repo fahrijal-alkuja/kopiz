@@ -163,7 +163,20 @@ exports.Prisma.SaleScalarFieldEnum = {
   shiftId: 'shiftId',
   transactionId: 'transactionId',
   discountAmount: 'discountAmount',
-  promoId: 'promoId'
+  promoId: 'promoId',
+  orderId: 'orderId'
+};
+
+exports.Prisma.OrderScalarFieldEnum = {
+  id: 'id',
+  transactionId: 'transactionId',
+  customerName: 'customerName',
+  tableNumber: 'tableNumber',
+  status: 'status',
+  totalAmount: 'totalAmount',
+  paymentMethod: 'paymentMethod',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.ShiftScalarFieldEnum = {
@@ -270,6 +283,7 @@ exports.Prisma.ModelName = {
   Material: 'Material',
   MenuItemMaterial: 'MenuItemMaterial',
   Sale: 'Sale',
+  Order: 'Order',
   Shift: 'Shift',
   Expense: 'Expense',
   MaterialLog: 'MaterialLog',

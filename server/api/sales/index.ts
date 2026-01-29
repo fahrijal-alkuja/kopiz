@@ -29,7 +29,8 @@ export default defineEventHandler(async (event) => {
     const sales = await prisma.sale.findMany({
       where,
       include: {
-        menuItem: true
+        menuItem: true,
+        order: true
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -274,6 +275,15 @@ export default defineEventHandler(async (event) => {
         await tx.sale.deleteMany({
           where: { transactionId: body.transactionId }
         })
+
+        // NEW: Delete assoc Order if exists
+        try {
+            await tx.order.delete({
+                where: { transactionId: body.transactionId }
+            })
+        } catch (e) {
+            // Ignore if order not found (legacy data)
+        }
       })
 
       return { success: true }

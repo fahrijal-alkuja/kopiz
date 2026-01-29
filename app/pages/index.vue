@@ -35,7 +35,10 @@
                <div class="label">Status Kasir / Shift</div>
                <div style="font-weight: bold;">{{ data.activeShift ? 'Sedang Beroperasi' : 'Shift Belum Dibuka' }}</div>
              </div>
-             <NuxtLink to="/shifts" class="btn" style="background: var(--color-border); color: var(--color-text);">Kelola Shift</NuxtLink>
+             <div style="display: flex; gap: 0.5rem;">
+                <NuxtLink to="/kitchen" class="btn" style="background: var(--color-primary); color: white;">Layara Dapur (KDS)</NuxtLink>
+                <NuxtLink to="/shifts" class="btn" style="background: var(--color-border); color: var(--color-text);">Kelola Shift</NuxtLink>
+             </div>
            </div>
         </div>
       </section>

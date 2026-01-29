@@ -8,4 +8,18 @@ export default defineEventHandler(async (event) => {
     await prisma.promo.delete({ where: { id } })
     return { success: true }
   }
+
+  if (method === 'PUT') {
+    const body = await readBody(event)
+    const updatedPromo = await prisma.promo.update({
+      where: { id },
+      data: {
+        name: body.name,
+        type: body.type, // NOMINAL or PERCENT
+        value: parseFloat(body.value),
+        isActive: body.isActive !== undefined ? body.isActive : true
+      }
+    })
+    return updatedPromo
+  }
 })

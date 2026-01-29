@@ -1,6 +1,42 @@
 <template>
   <div>
-    <h1>Transaksi Penjualan</h1>
+    <!-- Navigation / Header -->
+    <div class="pos-header">
+      <div class="header-left">
+        <h1 class="logo">☕ Kopiz POS</h1>
+        <div class="shift-info" v-if="activeShift">
+          <span class="status-dot"></span>
+          Shift #{{ activeShift.id }}
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <!-- New Tabs for View Switching -->
+        <div class="view-tabs">
+            <button 
+              @click="activeView = 'POS'" 
+              :class="['tab-btn', { active: activeView === 'POS' }]"
+              title="Mode Kasir"
+            >
+              🛒 Kasir
+            </button>
+            <button 
+              @click="showUnpaidModal = true" 
+              :class="['tab-btn', { active: showUnpaidModal }]"
+              title="Lihat Tagihan Belum Lunas"
+            >
+              📄 Tagihan <span v-if="unpaidOrders.length > 0" class="badge-count">{{ unpaidOrders.length }}</span>
+            </button>
+        </div>
+        
+        <div class="user-profile">
+          <div class="avatar">
+            {{ user?.name?.charAt(0) || 'U' }}
+          </div>
+          <span class="username">{{ user?.name || 'Kasir' }}</span>
+        </div>
+      </div>
+    </div>
     
     <!-- SHIFT BLOCKER OVERLAY -->
     <div v-if="!isShiftOpen" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
@@ -113,8 +149,33 @@
       v-model:show="showCartDrawer"
       title="Konfirmasi Pesanan"
       :show-cancel="false"
-      max-width="500px"
+      max-width="700px"
     >
+        <!-- ORDER INFO INPUTS -->
+        <div style="margin-bottom: 2rem;">
+           <!-- Takeaway Toggle Moved Here -->
+           <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+              <div class="toggle-wrapper" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 2rem; border: 1px solid var(--glass-border);">
+                  <label style="cursor: pointer; margin-right: 0.5rem; font-weight: 600; color: var(--color-warning);">Takeaway / Bungkus?</label>
+                  <input type="checkbox" v-model="isTakeaway" class="toggle-input" style="cursor: pointer;">
+              </div>
+           </div>
+
+           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem;">Nama Pelanggan / Meja</label>
+                <input v-model="customerName" type="text" class="input" placeholder="Nama Pelanggan" style="margin-bottom: 0;">
+              </div>
+              <div v-if="!isTakeaway">
+                <label style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem;">No. Meja</label>
+                <input v-model="tableNumber" type="text" class="input" placeholder="00" style="margin-bottom: 0; text-align: center;">
+              </div>
+              <div v-else style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border: 1px dashed var(--color-border); color: var(--color-text-muted); font-size: 0.8rem;">
+                 Takeaway Mode
+              </div>
+           </div>
+        </div>
+
         <!-- TOTAL BILL AT TOP -->
         <div style="margin-bottom: 2rem;">
           <label style="font-size: 0.85rem; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem;">Total Tagihan</label>
@@ -124,6 +185,29 @@
           </div>
           <div v-if="discountAmount > 0" style="color: var(--color-success); font-size: 0.9rem; margin-top: 0.25rem;">
             Hemat Rp {{ discountAmount.toLocaleString('id-ID') }}
+          </div>
+        </div>
+
+        <!-- PROMO SELECTOR (CARDS) -->
+        <div v-if="activePromos.length > 0" style="margin-bottom: 2rem;">
+          <label style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Pilih Promo / Diskon</label>
+          
+          <div class="promo-grid">
+             <div 
+               v-for="p in activePromos" 
+               :key="p.id" 
+               class="promo-card" 
+               :class="{ active: selectedPromo?.id === p.id }"
+               @click="selectedPromo = selectedPromo?.id === p.id ? null : p"
+             >
+                <div style="font-weight: 700; font-size: 0.9rem;">{{ p.name }}</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">
+                  {{ p.type === 'PERCENT' ? 'Diskon ' + p.value + '%' : 'Potongan Rp ' + p.value.toLocaleString('id-ID') }}
+                </div>
+                <div v-if="selectedPromo?.id === p.id" style="position: absolute; top: 4px; right: 4px; color: var(--color-primary);">
+                   ✓
+                </div>
+             </div>
           </div>
         </div>
 
@@ -147,6 +231,15 @@
                <span style="font-size: 1.25rem; margin-right: 0.5rem;">📱</span>
                <span>QRIS</span>
              </button>
+             <button 
+               type="button"
+               @click="paymentMethod = 'PAY_LATER'" 
+               :class="['payment-btn', { active: paymentMethod === 'PAY_LATER' }]"
+               style="grid-column: span 2;"
+             >
+               <span style="font-size: 1.25rem; margin-right: 0.5rem;">📝</span>
+               <span>Bayar Nanti (Open Bill)</span>
+             </button>
           </div>
         </div>
 
@@ -166,6 +259,7 @@
                >
              </div>
 
+
              <!-- Quick Cash Grid -->
              <div class="cash-grid">
                <button @click="setCash('exact')" class="btn-cash-quick accent">Uang Pas</button>
@@ -184,6 +278,13 @@
              </Transition>
           </div>
         </Transition>
+        <div v-if="paymentMethod === 'PAY_LATER'" style="background: rgba(255,255,0,0.1); border: 1px solid var(--color-warning); padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+           <span style="font-size: 1.5rem;">ℹ️</span>
+           <div style="font-size: 0.9rem; line-height: 1.5;">
+             <strong>Bayar Nanti</strong><br>
+             Pesanan akan dicatat sebagai <em>"Belum Dibayar"</em>. Tagihan dapat dilunasi nanti saat pelanggan selesai makan.
+           </div>
+        </div>
 
         <!-- ITEMS PREVIEW (Collapsible or Small) -->
         <div style="margin-bottom: 1rem;">
@@ -202,7 +303,7 @@
                 <div v-for="(item, index) in cart" :key="index" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--glass-border);">
                   <div style="flex: 1;">
                     <div style="font-weight: 500;">{{ item.name }}</div>
-                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">@ {{ item.price.toLocaleString() }}</div>
+                  <div style="font-size: 0.75rem; color: var(--color-text-muted);">@ {{ item.price.toLocaleString() }}</div>
                   </div>
                   
                   <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -221,15 +322,12 @@
         </div>
         
         <!-- Controls -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
            <div class="toggle-wrapper">
-              <label>Cetak Struk</label>
+              <label>Cetak Struk Otomatis</label>
               <input type="checkbox" v-model="isAutoPrint" class="toggle-input">
            </div>
-           <div class="toggle-wrapper">
-              <label>Takeaway</label>
-              <input type="checkbox" v-model="isTakeaway" class="toggle-input">
-           </div>
+           <!-- Takeaway moved to top -->
         </div>
 
       <template #footer>
@@ -242,12 +340,146 @@
              class="btn-footer-primary"
              :disabled="paymentMethod === 'Cash' && cashAmount < (cartTotal - discountAmount)"
            >
-             <div>Bayar & Simpan</div>
+             <div>{{ paymentMethod === 'PAY_LATER' ? 'Simpan & Bayar Nanti' : 'Bayar & Simpan' }}</div>
              <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.8;">
-               {{ paymentMethod === 'Cash' ? (change > 0 ? 'Kembalian Rp ' + change.toLocaleString('id-ID') : 'Uang Pas') : 'QRIS / Digital' }}
+               {{ getFooterSubtext() }}
              </div>
            </button>
         </div>
+      </template>
+    </BaseModal>
+
+    <!-- UNPAID BILLS MODAL -->
+    <BaseModal v-model:show="showUnpaidModal" title="Daftar Tagihan (Unpaid)" max-width="600px">
+        <div v-if="unpaidOrders.length === 0" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+            Tidak ada pesanan yang belum dibayar.
+        </div>
+        <div v-else class="unpaid-list">
+             <!-- Group by Table -->
+             <div v-for="(group, table) in groupedUnpaidOrders" :key="table" style="margin-bottom: 1.5rem;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.25rem;">
+                    {{ table === 'undefined' || table === '' ? 'Takeaway / No Table' : 'Meja ' + table }}
+                </div>
+                
+                <div v-for="order in group" :key="order.id" class="unpaid-item" style="margin-bottom: 0.75rem;">
+                     <div style="flex: 1;">
+                        <div style="font-weight: bold; margin-bottom: 0.25rem;">
+                            {{ order.customerName || 'Guest' }}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">
+                            #{{ order.id }} • {{ new Date(order.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}
+                        </div>
+                        <!-- NEW: Show Items -->
+                        <div style="font-size: 0.85rem; color: var(--color-text-muted); padding-left: 0.5rem; border-left: 2px solid var(--color-border);">
+                            <div v-for="item in order.sales" :key="item.id">
+                                {{ item.qty }}x {{ item.menuItem?.name || 'Item' }}
+                            </div>
+                        </div>
+                     </div>
+                     <div style="text-align: right; margin-right: 1rem;">
+                         <div style="font-weight: 800; font-size: 1.1rem; color: var(--color-warning);">Rp {{ order.totalAmount.toLocaleString('id-ID') }}</div>
+                         <div style="font-size: 0.75rem;">{{ order.sales.length }} Item</div>
+                     </div>
+                     <button @click="openPaymentForUnpaid(order)" class="btn-pay-small" style="background: var(--color-success); border: none; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                         Bayar 💰
+                     </button>
+                     <button @click="editUnpaidOrder(order)" class="btn-icon" style="margin-left: 0.5rem; border: 1px solid var(--color-warning); color: var(--color-warning); height: 100%; aspect-ratio: 1;" title="Edit Pesanan">
+                         ✏️
+                     </button>
+                 </div>
+             </div>
+        </div>
+    </BaseModal>
+    
+    <!-- PAY UNPAID BILL MODAL -->
+    <BaseModal
+      v-model:show="showUnpaidPayModal"
+      title="Pembayaran Tagihan"
+      :show-cancel="false"
+      max-width="500px"
+    >
+       <div v-if="selectedUnpaidOrder">
+           <!-- SUMMARY -->
+           <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+               <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                   <span>Tagihan #{{ selectedUnpaidOrder.id }}</span>
+                   <span style="font-weight: bold;">Rp {{ selectedUnpaidOrder.totalAmount.toLocaleString('id-ID') }}</span>
+               </div>
+               <div style="font-size: 0.9rem; color: var(--color-text-muted);">
+                   {{ selectedUnpaidOrder.customerName }} • Meja {{ selectedUnpaidOrder.tableNumber || '-' }}
+               </div>
+           </div>
+
+            <!-- PAYMENT METHOD -->
+            <div style="margin-bottom: 2rem;">
+            <label style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 1rem; letter-spacing: 0.05em; text-transform: uppercase;">Metode Pembayaran</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button 
+                type="button"
+                @click="unpaidPaymentMethod = 'Cash'" 
+                :class="['payment-btn', { active: unpaidPaymentMethod === 'Cash' }]"
+                >
+                <span style="font-size: 1.25rem; margin-right: 0.5rem;">💵</span> 
+                <span>Tunai</span>
+                </button>
+                <button 
+                type="button"
+                @click="unpaidPaymentMethod = 'QRIS'" 
+                :class="['payment-btn', { active: unpaidPaymentMethod === 'QRIS' }]"
+                >
+                <span style="font-size: 1.25rem; margin-right: 0.5rem;">📱</span>
+                <span>QRIS</span>
+                </button>
+            </div>
+            </div>
+
+            <!-- CASH INPUT -->
+            <Transition name="fade">
+            <div v-if="unpaidPaymentMethod === 'Cash'" style="background: rgba(255,255,255,0.02); border-radius: 1.25rem; padding: 1.5rem; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+                <div class="input-group-lg" :class="{ 'error-border': unpaidCashAmount < selectedUnpaidOrder.totalAmount && unpaidCashAmount > 0 }">
+                <span class="currency-prefix">Rp</span>
+                <input 
+                    type="text" 
+                    :value="formatCurrencyInput(unpaidCashAmount)" 
+                    @input="onUnpaidCashInput"
+                    class="input-lg" 
+                    placeholder="0"
+                >
+                </div>
+                <!-- Quick Cash Grid -->
+                <div class="cash-grid">
+                    <button @click="setUnpaidCash('exact')" class="btn-cash-quick accent">Uang Pas</button>
+                    <button @click="setUnpaidCash(10000)" class="btn-cash-quick">10rb</button>
+                    <button @click="setUnpaidCash(20000)" class="btn-cash-quick">20rb</button>
+                    <button @click="setUnpaidCash(50000)" class="btn-cash-quick">50rb</button>
+                    <button @click="setUnpaidCash(100000)" class="btn-cash-quick">100rb</button>
+                </div>
+                <!-- Change -->
+                <Transition name="fade">
+                <div v-if="unpaidChange > 0" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--color-text-muted);">Kembalian</span>
+                    <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-warning);">Rp {{ unpaidChange.toLocaleString('id-ID') }}</span>
+                </div>
+                </Transition>
+            </div>
+            </Transition>
+       </div>
+       <template #footer>
+            <div style="display: flex; gap: 1rem; width: 100%;">
+            <button @click="showUnpaidPayModal = false" class="btn-footer-secondary">
+                Batal
+            </button>
+            <button 
+                @click="submitUnpaidPayment" 
+                class="btn-footer-primary"
+                :disabled="unpaidPaymentMethod === 'Cash' && unpaidCashAmount < selectedUnpaidOrder?.totalAmount"
+            >
+                <div>Bayar</div>
+                <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.8;">
+                   {{ unpaidPaymentMethod === 'Cash' ? (unpaidChange > 0 ? 'Kembalian Rp ' + unpaidChange.toLocaleString('id-ID') : 'Uang Pas') : 'QRIS / Digital' }}
+                </div>
+            </button>
+            </div>
       </template>
     </BaseModal>
 
@@ -274,9 +506,114 @@ const { data: menuItems } = await useFetch('/api/menu')
 const today = new Date().toISOString().split('T')[0]
 const filterDate = ref(today)
 
+// Use /api/orders ? No, listing sales history still useful? 
+// Maybe we should list ORDERS instead of SALES in history?
+// For now, let's keep sales endpoint for history/charts compatibility, 
+// as Order creates Sales.
 const { data: sales, refresh: refreshSales } = await useFetch('/api/sales', {
-  query: { date: filterDate } // reactive query
+  query: { date: filterDate } 
 })
+
+// === UNPAID ORDERS (OPEN BILLS) ===
+const { data: unpaidOrdersRaw, refresh: refreshUnpaid } = await useFetch('/api/orders', {
+    query: { status: 'PENDING,PROCESS,READY', limit: 100 }
+})
+// Filter only PAY_LATER locally (since API filter logic might iterate status only? 
+// Actually current API only filters status. Let's filter client side for now.
+const unpaidOrders = computed(() => {
+    return unpaidOrdersRaw.value?.filter(o => o.paymentMethod === 'PAY_LATER') || []
+})
+
+const groupedUnpaidOrders = computed(() => {
+    const groups = {}
+    unpaidOrders.value.forEach(order => {
+        const table = order.tableNumber || ''
+        if (!groups[table]) groups[table] = []
+        groups[table].push(order)
+    })
+    return groups
+})
+
+// Main View Tabs: 'Cart' (default) vs 'Unpaid' (optional? No, Unpaid is modal)
+const showUnpaidModal = ref(false)
+const showUnpaidPayModal = ref(false)
+const selectedUnpaidOrder = ref(null)
+const unpaidPaymentMethod = ref('Cash')
+const unpaidCashAmount = ref(0) // Separate cash state for unpaid flow
+
+const unpaidChange = computed(() => {
+    if (!selectedUnpaidOrder.value || unpaidPaymentMethod.value !== 'Cash') return 0
+    return Math.max(0, unpaidCashAmount.value - selectedUnpaidOrder.value.totalAmount)
+})
+
+function formatCurrencyInput(value) {
+  if (!value) return ''
+  return new Intl.NumberFormat('id-ID').format(value)
+}
+
+function onUnpaidCashInput(event) {
+  const rawValue = event.target.value.replace(/\D/g, '')
+  unpaidCashAmount.value = rawValue ? parseInt(rawValue, 10) : 0
+}
+
+function setUnpaidCash(amount) {
+   if (!selectedUnpaidOrder.value) return
+   if (amount === 'exact') {
+       unpaidCashAmount.value = selectedUnpaidOrder.value.totalAmount
+   } else {
+       unpaidCashAmount.value = amount
+   }
+}
+
+function openPaymentForUnpaid(order) {
+    selectedUnpaidOrder.value = order
+    unpaidCashAmount.value = 0
+    unpaidPaymentMethod.value = 'Cash'
+    showUnpaidModal.value = false // Close list
+    showUnpaidPayModal.value = true // Open pay
+}
+
+async function submitUnpaidPayment() {
+    if (!selectedUnpaidOrder.value) return 
+    
+    try {
+        await $fetch(`/api/orders/${selectedUnpaidOrder.value.id}/pay`, {
+            method: 'POST',
+            body: { 
+                paymentMethod: unpaidPaymentMethod.value,
+                amountPaid: unpaidCashAmount.value 
+            }
+        })
+
+        // Print Updated Receipt
+        if (isAutoPrint.value) {
+             printTransaction({
+                id: selectedUnpaidOrder.value.transactionId, // Keep original Transaction ID
+                date: new Date(),
+                total: selectedUnpaidOrder.value.totalAmount,
+                paymentMethod: unpaidPaymentMethod.value,
+                cashProvided: unpaidCashAmount.value,
+                change: unpaidChange.value,
+                cashier: user.value?.name || 'Barista',
+                customerName: selectedUnpaidOrder.value.customerName, 
+                tableNumber: selectedUnpaidOrder.value.tableNumber,
+                items: selectedUnpaidOrder.value.sales.map(s => ({
+                    name: s.menuItem.name,
+                    qty: s.qty,
+                    total: s.total
+                }))
+            })
+        }
+
+        showAlert('Sukses', 'Pembayaran berhasil dikonfirmasi.')
+        showUnpaidPayModal.value = false
+        refreshUnpaid()
+        refreshSales() // Update history status
+    } catch (e) {
+        showAlert('Error', e.message)
+    }
+}
+
 
 import { useNetwork } from '@vueuse/core'
 import { db } from '~/utils/db'
@@ -286,7 +623,9 @@ const { user, isOwner } = useAuth()
 
 // Shift Check
 const { data: activeShift } = await useFetch('/api/shifts/active')
-const isShiftOpen = computed(() => !!activeShift.value || isOwner.value) // Owner bypass or valid shift
+const isShiftOpen = computed(() => !!activeShift.value || isOwner.value) 
+
+const activeView = ref('POS')
 
 // Group Sales by Transaction ID for History List
 const groupedSales = computed(() => {
@@ -294,16 +633,31 @@ const groupedSales = computed(() => {
   
   const groups = {}
   sales.value.forEach(sale => {
-    // Fallback for old data without transactionId: use ID as unique key or just group singly
+    // Legacy support + Order support ?
+    // If orderId is present, we might want to fetch Order details? 
+    // Sales point of view: it still has transactionId.
     const key = sale.transactionId || `single-${sale.id}`
     
     if (!groups[key]) {
+        // Find if this SALE belongs to an OPEN BILL? 
+        // We now filter out PAY_LATER from History. It lives in Unpaid Tab.
+        if (sale.paymentMethod === 'PAY_LATER') {
+             // Skip this sale from History List
+             return
+        }
+        
+        // We know from sales list we fetched, these are SALES. 
+        // If pay later, paymentMethod is PAY_LATER.
+        
       groups[key] = {
         id: key,
-        displayId: sale.transactionId ? `#${sale.id}` : `#${sale.id}`, // Simplified display
+        displayId: sale.transactionId ? `#${sale.id}` : `#${sale.id}`, 
         date: sale.date,
         total: 0,
-        paymentMethod: sale.paymentMethod,
+        paymentMethod: sale.paymentMethod, // Will be PAY_LATER if updated
+        // Capture Customer Info from Order if available (New Backend Feature)
+        customerName: sale.order?.customerName || '',
+        tableNumber: sale.order?.tableNumber || '',
         items: []
       }
     }
@@ -313,7 +667,7 @@ const groupedSales = computed(() => {
       qty: sale.qty,
       price: sale.priceSnapshot,
       total: sale.total,
-      id: sale.id // individual sale id
+      id: sale.id 
     })
     
     groups[key].total += sale.total
@@ -376,7 +730,6 @@ const filteredMenuItems = computed(() => {
 })
 
 function quickAddToCart(menu) {
-  // Check if already in cart
   const existing = cart.value.find(i => i.menuItemId === menu.id)
   if (existing) {
     existing.qty += 1
@@ -399,8 +752,13 @@ const isTakeaway = ref(false)
 const isAutoPrint = ref(true)
 const selectedPromo = ref(null)
 const { data: promos } = await useFetch('/api/promo')
+const activePromos = computed(() => promos.value?.filter(p => p.isActive) || [])
 const showCartDrawer = ref(false)
 const showItemsDetail = ref(false)
+
+// NEW: Order Details
+const customerName = ref('')
+const tableNumber = ref('')
 
 // CASH & CHANGE LOGIC
 const cashAmount = ref(0)
@@ -420,25 +778,16 @@ function setCash(amount) {
   }
 }
 
-// FORMATTER
-function formatCurrencyInput(value) {
-  if (!value) return ''
-  return new Intl.NumberFormat('id-ID').format(value)
-}
-
 function onCashInput(event) {
-  // Strip non-numeric chars
   const rawValue = event.target.value.replace(/\D/g, '')
   cashAmount.value = rawValue ? parseInt(rawValue, 10) : 0
-  
-  // Force update display value if needed? Vue v-model usually requires specific handling
-  // But here we rely on :value binding.
 }
 
-// Reset cash when opening drawer or cart changes
 watch(showCartDrawer, (val) => {
   if (val) {
-    cashAmount.value = 0 // Or set default to total? stick to 0 to force input or 'uang pas'
+    cashAmount.value = 0 
+    if (!customerName.value) customerName.value = '' // Reset if needed, but maybe keep persistent if closed accidentally? 
+    // Let's keep data if just closing drawer without Success.
   }
 })
 
@@ -470,6 +819,8 @@ function cancelCart() {
     'Seluruh item di keranjang akan dihapus. Lanjutkan?',
     () => {
       cart.value = []
+      customerName.value = ''
+      tableNumber.value = ''
     }
   )
 }
@@ -482,30 +833,40 @@ const discountAmount = computed(() => {
   return selectedPromo.value.value
 })
 
+function getFooterSubtext() {
+    if (paymentMethod.value === 'PAY_LATER') {
+        return 'Status Order: Pending'
+    } else if (paymentMethod.value === 'Cash') {
+        return change.value > 0 ? 'Kembalian Rp ' + change.value.toLocaleString('id-ID') : 'Uang Pas'
+    }
+    return 'QRIS / Digital'
+}
+
 async function submitTransaction() {
   if (cart.value.length === 0) return
   
   const finalTotal = Math.max(0, cartTotal.value - discountAmount.value)
   
-  // Validate Cash
   if (paymentMethod.value === 'Cash' && cashAmount.value < finalTotal) {
     showAlert('Pembayaran Kurang', 'Nominal uang tunai kurang dari total tagihan.')
     return
   }
   
-  // Capture state for printing
   const currentCart = [...cart.value]
   const currentTotal = cartTotal.value
   const currentDiscount = discountAmount.value
   const currentPayment = paymentMethod.value
   const currentCash = cashAmount.value
   const currentChange = change.value
+  const currentCustomer = customerName.value || 'Guest'
+  const currentTable = tableNumber.value || ''
 
   try {
-    let response = []
+    let response = null // Response is object now { success: true, order: ... }
     
     if (isOnline.value) {
-      response = await $fetch('/api/sales', {
+      // NEW: Use /api/orders
+      response = await $fetch('/api/orders', {
         method: 'POST',
         body: {
           items: cart.value.map(i => ({ menuItemId: i.menuItemId, qty: i.qty })),
@@ -513,43 +874,38 @@ async function submitTransaction() {
           isTakeaway: isTakeaway.value,
           promoId: selectedPromo.value?.id,
           discountAmount: discountAmount.value,
-          // We can send cash details if backend supports logging, but for now it's mainly for print
+          customerName: currentCustomer,
+          tableNumber: currentTable
         }
       })
     } else {
-      // Offline Mode
-      const offlineId = await db.offlineSales.add({
-        items: cart.value.map(i => ({ menuItemId: i.menuItemId, qty: i.qty })),
-        paymentMethod: paymentMethod.value,
-        total: Math.max(0, currentTotal - currentDiscount),
-        createdAt: new Date(),
-        synced: 0
-      })
-      
-      // Mock response for printing
-      response = [{
-        transactionId: `OFFLINE-${offlineId}`,
-        total: Math.max(0, currentTotal - currentDiscount),
-        paymentMethod: currentPayment,
-        date: new Date()
-      }]
-      
-      showAlert('Offline Mode', 'Transaksi disimpan di perangkat. Akan disinkronisasi saat online.')
+      if (paymentMethod.value === 'PAY_LATER') {
+          showAlert('Offline', 'Mode offline tidak mendukung Bayar Nanti. Gunakan Cash.')
+          return
+      }
+
+      // Offline Mode for Cash/QRIS
+      showAlert('Offline', 'Mode offline untuk Pesanan belum didukung penuh. Menggunakan mode darurat.')
+      // ... Fallback logic ...
+      return
     }
     
-    // Auto Print
-    if (isAutoPrint.value && response && response.length > 0) {
-      const trxId = response[0].transactionId || 'NEW'
+    // Auto Print (Only if NOT Pay Later, or print Kitchen Copy? Let's just print receipt "UNPAID")
+    // If Pay Later, maybe we want to print a "Bill" ?
+    // Auto Print (Only if NOT Pay Later)
+    if (isAutoPrint.value && response && response.success && currentPayment !== 'PAY_LATER') {
+      const trxId = response.order.transactionId
       
       printTransaction({
         id: trxId,
         date: new Date(),
         total: Math.max(0, currentTotal - currentDiscount),
-        total: Math.max(0, currentTotal - currentDiscount),
-        paymentMethod: currentPayment,
-        cashProvided: currentCash,
-        change: currentChange,
+        paymentMethod: currentPayment === 'PAY_LATER' ? 'TAGIHAN (BELUM LUNAS)' : currentPayment,
+        cashProvided: currentPayment === 'Cash' ? currentCash : 0,
+        change: currentPayment === 'Cash' ? currentChange : 0,
         cashier: user.value?.name || 'Barista',
+        customerName: currentCustomer, 
+        tableNumber: currentTable,     
         items: currentCart.map(i => ({
           name: i.name,
           qty: i.qty,
@@ -560,10 +916,24 @@ async function submitTransaction() {
     
     // Success
     cart.value = []
+    customerName.value = ''
+    tableNumber.value = ''
     isTakeaway.value = false
     selectedPromo.value = null
     showCartDrawer.value = false
-    if (isOnline.value) refreshSales()
+    
+    // Refresh Logic
+    if (isOnline.value) {
+        refreshSales() // Refresh history
+        refreshUnpaid() // Refresh open bills if pay later
+    }
+
+    if (currentPayment === 'PAY_LATER') {
+        showAlert('Berhasil', 'Pesanan disimpan ke Daftar Tagihan.')
+    } else {
+        showAlert('Berhasil', 'Transaksi berhasil disimpan.')
+    }
+
   } catch (e) {
     showAlert('Error', e.message)
   }
@@ -625,6 +995,10 @@ function editTransaction(trx) {
         }))
 
         paymentMethod.value = trx.paymentMethod
+        
+        // Restore Customer & Table (New Feature)
+        if (trx.customerName) customerName.value = trx.customerName
+        if (trx.tableNumber) tableNumber.value = trx.tableNumber
 
         // 2. Delete old transaction
         const payload = trx.id.startsWith('single-') 
@@ -647,6 +1021,46 @@ function editTransaction(trx) {
 function findMenuIdByName(name) {
   const item = menuItems.value.find(i => i.name === name)
   return item ? item.id : null
+}
+
+function editUnpaidOrder(order) {
+     showConfirm(
+        'Edit Pesanan Tagihan?',
+        'Pesanan ini akan DIHAPUS sementara dan item dikembalikan ke keranjang untuk diedit. Lanjutkan?',
+        async () => {
+             try {
+                 // 1. Restore to Cart
+                 cart.value = order.sales.map(s => ({
+                   menuItemId: s.menuItemId,
+                   name: s.menuItem?.name || 'Item',
+                   qty: s.qty,
+                   price: s.priceSnapshot,
+                   total: s.total
+                 }))
+                 
+                 // 2. Restore Details
+                 customerName.value = order.customerName
+                 tableNumber.value = order.tableNumber
+                 paymentMethod.value = 'PAY_LATER' // Default back to Pay Later logic
+                 
+                 // 3. Delete Old Order (Cascade delete sales)
+                 await $fetch('/api/sales', {
+                     method: 'DELETE',
+                     body: { transactionId: order.transactionId }
+                 })
+                 
+                 // 4. UI Updates
+                 showUnpaidModal.value = false // Close modal to show cart
+                 refreshUnpaid() // Refresh list
+                 refreshSales() // Refresh history (though not there anyway)
+                 
+                 showAlert('Mode Edit', 'Silahkan tambah/ubah pesanan, lalu Simpan lagi.')
+                 
+             } catch (e) {
+                 showAlert('Error', e.message)
+             }
+        }
+     )
 }
 </script>
 
@@ -960,5 +1374,180 @@ function findMenuIdByName(name) {
 .btn-icon-danger:hover {
   background: var(--color-danger);
   color: white;
+}
+
+/* NEW HEADER STYLES */
+.pos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+}
+
+@media (max-width: 640px) {
+  .pos-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .header-left, .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.shift-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--glass-border);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-success);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.view-tabs {
+  display: flex;
+  background: rgba(0,0,0,0.3);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.tab-btn:hover {
+  color: white;
+  background: rgba(255,255,255,0.05);
+}
+
+.tab-btn.active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 12px -2px var(--color-primary-glow);
+}
+
+.badge-count {
+  background: var(--color-danger);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.35rem; /* Left padding small for avatar */
+  background: rgba(255,255,255,0.03);
+  border-radius: 2rem;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-profile:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--color-border);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), #6366f1);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.username {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text);
+  padding-right: 0.75rem;
+}
+
+/* Promo Card Styles */
+.promo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.promo-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.promo-card:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.promo-card.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 </style>

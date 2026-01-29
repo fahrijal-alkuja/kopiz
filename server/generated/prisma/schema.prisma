@@ -63,6 +63,24 @@ model Sale {
   menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
   shift          Shift?   @relation(fields: [shiftId], references: [id])
   promo          Promo?   @relation(fields: [promoId], references: [id])
+  orderId        Int?
+  order          Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([date])
+  @@index([transactionId])
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  transactionId String   @unique
+  customerName  String?
+  tableNumber   String?
+  status        String   @default("PENDING") // PENDING, PROCESS, READY, COMPLETED, CANCELLED
+  totalAmount   Float
+  paymentMethod String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  sales         Sale[]
 }
 
 model Shift {
