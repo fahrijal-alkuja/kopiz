@@ -1,30 +1,13 @@
 <template>
   <div>
-    <h1>Catatan Pengeluaran</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Catatan Pengeluaran</h1>
+        <button @click="openAddModal" class="btn btn-danger">
+           + Tambah Pengeluaran
+        </button>
+    </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-top: 2rem;">
-      <div class="card">
-        <h3>Input Pengeluaran</h3>
-        <form @submit.prevent="submitExpense">
-          <label>Uraian Belanja</label>
-          <input v-model="form.description" type="text" class="input" required placeholder="Contoh: Beli Susu, Bayar Listrik">
-
-          <label>Kategori</label>
-          <select v-model="form.category" class="select" required>
-            <option value="HPP">HPP (Bahan Baku)</option>
-            <option value="OPS">OPS (Operasional, Gaji, dll)</option>
-          </select>
-
-          <label>Nominal (Rp)</label>
-          <input v-model="form.amount" type="number" class="input" required placeholder="0">
-
-          <label>Keterangan (Optional)</label>
-          <input v-model="form.note" type="text" class="input" placeholder="Catatan tambahan...">
-
-          <button type="submit" class="btn btn-danger" style="width: 100%;">Simpan Pengeluaran</button>
-        </form>
-      </div>
-
+    <!-- List Expenses -->
       <div class="card">
          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <h3>Riwayat Pengeluaran Hari Ini</h3>
@@ -65,9 +48,8 @@
           Tidak ada pengeluaran pada tanggal ini.
         </div>
       </div>
-    </div>
 
-    <!-- Modern Modals -->
+    <!-- Alert Modal -->
     <BaseModal
       v-model:show="modal.show"
       :title="modal.title"
@@ -76,6 +58,32 @@
       :confirm-text="modal.confirmText"
       @confirm="modal.onConfirm"
     />
+
+    <!-- Input Expense Modal -->
+    <BaseModal
+      v-model:show="expenseModal.show"
+      :title="'Input Pengeluaran'"
+      :confirm-text="'Simpan Pengeluaran'"
+      :show-cancel="true"
+      @confirm="submitExpense"
+    >
+        <div style="padding: 1rem 0;">
+          <label>Uraian Belanja</label>
+          <input v-model="form.description" type="text" class="input" required placeholder="Contoh: Beli Susu, Bayar Listrik">
+
+          <label>Kategori</label>
+          <select v-model="form.category" class="select" required>
+            <option value="HPP">HPP (Bahan Baku)</option>
+            <option value="OPS">OPS (Operasional, Gaji, dll)</option>
+          </select>
+
+          <label>Nominal (Rp)</label>
+          <input v-model="form.amount" type="number" class="input" required placeholder="0">
+
+          <label>Keterangan (Optional)</label>
+          <input v-model="form.note" type="text" class="input" placeholder="Catatan tambahan...">
+        </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -97,6 +105,10 @@ const modal = ref({
   onConfirm: () => {}
 })
 
+const expenseModal = ref({
+  show: false
+})
+
 function showAlert(title, message) {
   modal.value = {
     show: true,
@@ -115,15 +127,24 @@ const form = ref({
   note: ''
 })
 
+function openAddModal() {
+    form.value.description = ''
+    form.value.amount = ''
+    form.value.note = ''
+    form.value.category = 'HPP'
+    expenseModal.value.show = true
+}
+
 async function submitExpense() {
   try {
+    if(!form.value.description || !form.value.amount) return
+
     await $fetch('/api/expenses', {
       method: 'POST',
       body: form.value
     })
-    form.value.description = ''
-    form.value.amount = ''
-    form.value.note = ''
+    
+    expenseModal.value.show = false
     refresh()
   } catch (e) {
     showAlert('Error', e.message)

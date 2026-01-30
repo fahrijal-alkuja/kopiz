@@ -10,103 +10,124 @@
       </div>
     </div>
 
-    <div v-if="pendingOrders.length === 0 && processOrders.length === 0 && readyOrders.length === 0" class="empty-state">
-      <div style="font-size: 3rem;">😴</div>
-      <h2>Tidak ada pesanan aktif</h2>
-      <p>Santai sejenak sambil menunggu pesanan baru.</p>
-    </div>
-
-    <div class="kanban-board">
-      <!-- PENDING COLUMN -->
-      <div class="column">
-        <div class="column-header pending">
-          <h2>Baru Masuk ({{ pendingOrders.length }})</h2>
+    <div class="kds-layout">
+        <!-- LEFT SIDEBAR: ITEM SUMMARY (BATCHING) -->
+        <div class="summary-sidebar">
+            <div class="summary-header">
+                <h3>🔥 Batch Masak</h3>
+                <div style="font-size: 0.8rem; opacity: 0.7;">Total item yang harus dibuat</div>
+            </div>
+            <div class="summary-list">
+                <div v-for="(qty, name) in itemSummary" :key="name" class="summary-item">
+                    <div class="summary-qty">{{ qty }}</div>
+                    <div class="summary-name">{{ name }}</div>
+                </div>
+                <div v-if="Object.keys(itemSummary).length === 0" style="text-align: center; padding: 2rem; opacity: 0.5;">
+                    Tidak ada antrian
+                </div>
+            </div>
         </div>
-        <div class="order-list">
-          <div v-for="order in pendingOrders" :key="order.id" class="order-card pending-card" :class="{ 'late-warning': isLate(order.createdAt) }">
-            <div class="card-header">
-              <span class="table-badge">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
-              <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
-            </div>
-            <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
-            <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
-            
-            <div class="items-list">
-              <div v-for="sale in order.sales" :key="sale.id" class="order-item">
-                <span class="qty">{{ sale.qty }}x</span>
-                <span class="name">{{ sale.menuItem.name }}</span>
-              </div>
+
+        <!-- RIGHT: KANBAN BOARD -->
+        <div class="kanban-wrapper">
+             <div v-if="pendingOrders.length === 0 && processOrders.length === 0 && readyOrders.length === 0" class="empty-state">
+                <div style="font-size: 3rem;">😴</div>
+                <h2>Tidak ada pesanan aktif</h2>
+                <p>Santai sejenak sambil menunggu pesanan baru.</p>
             </div>
 
-            <div class="card-actions">
-              <button @click="updateStatus(order.id, 'PROCESS')" class="btn btn-process">
-                Mulai Masak 🍳
-              </button>
+            <div class="kanban-board">
+            <!-- PENDING COLUMN -->
+            <div class="column">
+                <div class="column-header pending">
+                <h2>Baru Masuk ({{ pendingOrders.length }})</h2>
+                </div>
+                <div class="order-list">
+                <div v-for="order in pendingOrders" :key="order.id" class="order-card" :class="getUrgencyClass(order.createdAt)">
+                    <div class="card-header">
+                    <span class="table-badge">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
+                    <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
+                    </div>
+                    <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
+                    <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
+                    
+                    <div class="items-list">
+                    <div v-for="sale in order.sales" :key="sale.id" class="order-item">
+                        <span class="qty">{{ sale.qty }}x</span>
+                        <span class="name">{{ sale.menuItem.name }}</span>
+                    </div>
+                    </div>
+
+                    <div class="card-actions">
+                    <button @click="updateStatus(order.id, 'PROCESS')" class="btn btn-process">
+                        Mulai Masak 🍳
+                    </button>
+                    </div>
+                </div>
+                </div>
             </div>
-          </div>
+
+            <!-- PROCESS COLUMN -->
+            <div class="column">
+                <div class="column-header process">
+                <h2>Sedang Disiapkan ({{ processOrders.length }})</h2>
+                </div>
+                <div class="order-list">
+                <div v-for="order in processOrders" :key="order.id" class="order-card" :class="getUrgencyClass(order.createdAt)">
+                    <div class="card-header">
+                    <span class="table-badge process">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
+                    <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
+                    </div>
+                    <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
+                    <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
+                    
+                    <div class="items-list">
+                    <div v-for="sale in order.sales" :key="sale.id" class="order-item">
+                        <span class="qty">{{ sale.qty }}x</span>
+                        <span class="name">{{ sale.menuItem.name }}</span>
+                    </div>
+                    </div>
+
+                    <div class="card-actions">
+                    <button @click="updateStatus(order.id, 'READY')" class="btn btn-ready">
+                        Selesai / Ready ✅
+                    </button>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- READY COLUMN (NEW) -->
+            <div class="column">
+                <div class="column-header ready">
+                <h2>Siap Saji ({{ readyOrders.length }})</h2>
+                </div>
+                <div class="order-list">
+                <div v-for="order in readyOrders" :key="order.id" class="order-card ready-card">
+                    <div class="card-header">
+                    <span class="table-badge ready">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
+                    <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
+                    </div>
+                    <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
+                    <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
+                    
+                    <div class="items-list">
+                    <div v-for="sale in order.sales" :key="sale.id" class="order-item">
+                        <span class="qty">{{ sale.qty }}x</span>
+                        <span class="name">{{ sale.menuItem.name }}</span>
+                    </div>
+                    </div>
+
+                    <div class="card-actions">
+                    <button @click="updateStatus(order.id, 'COMPLETED')" class="btn btn-complete">
+                        Tutup / Serve 👍
+                    </button>
+                    </div>
+                </div>
+                </div>
+            </div>
+            </div>
         </div>
-      </div>
-
-      <!-- PROCESS COLUMN -->
-      <div class="column">
-        <div class="column-header process">
-          <h2>Sedang Disiapkan ({{ processOrders.length }})</h2>
-        </div>
-        <div class="order-list">
-          <div v-for="order in processOrders" :key="order.id" class="order-card process-card" :class="{ 'late-warning': isLate(order.createdAt) }">
-            <div class="card-header">
-              <span class="table-badge process">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
-              <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
-            </div>
-            <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
-             <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
-            
-            <div class="items-list">
-              <div v-for="sale in order.sales" :key="sale.id" class="order-item">
-                <span class="qty">{{ sale.qty }}x</span>
-                <span class="name">{{ sale.menuItem.name }}</span>
-              </div>
-            </div>
-
-            <div class="card-actions">
-              <button @click="updateStatus(order.id, 'READY')" class="btn btn-ready">
-                Selesai / Ready ✅
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-       <!-- READY COLUMN (NEW) -->
-       <div class="column">
-        <div class="column-header ready">
-          <h2>Siap Saji ({{ readyOrders.length }})</h2>
-        </div>
-        <div class="order-list">
-          <div v-for="order in readyOrders" :key="order.id" class="order-card ready-card">
-            <div class="card-header">
-              <span class="table-badge ready">{{ order.tableNumber ? 'Meja ' + order.tableNumber : 'Takeaway' }}</span>
-              <span class="time-ago">{{ timeAgo(order.createdAt) }}</span>
-            </div>
-            <div class="customer-name">{{ order.customerName || 'Guest' }}</div>
-             <div class="order-id">#{{ order.transactionId.slice(0,8) }}</div>
-            
-            <div class="items-list">
-              <div v-for="sale in order.sales" :key="sale.id" class="order-item">
-                <span class="qty">{{ sale.qty }}x</span>
-                <span class="name">{{ sale.menuItem.name }}</span>
-              </div>
-            </div>
-
-            <div class="card-actions">
-              <button @click="updateStatus(order.id, 'COMPLETED')" class="btn btn-complete">
-                Tutup / Serve 👍
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
@@ -115,7 +136,7 @@
 import { useIntervalFn, useNow, useDateFormat } from '@vueuse/core'
 
 // SOUND: Ding Sound (Base64)
-const dingSound = 'data:audio/mp3;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAG84AA0WAgAAAAAA9GP/7H3/8z//f/////3//9//+////9//3//7//7/////9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9'
+const dingSound = 'data:audio/mp3;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAG84AA0WAgAAAAAA9GP/7H3/8z//f/////3//9//+////9//3//7//7/////9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9//9'
 const audioEnabled = ref(false)
 
 function toggleAudio() {
@@ -166,15 +187,35 @@ const readyOrders = computed(() =>
   orders.value?.filter(o => o.status === 'READY') || []
 )
 
+// NEW: Item Summary (Batching)
+const itemSummary = computed(() => {
+    const summary = {}
+    // Combine Pending & Process items (Active cooking)
+    const activeOrders = [...pendingOrders.value, ...processOrders.value]
+    
+    activeOrders.forEach(order => {
+        order.sales.forEach(sale => {
+            if (summary[sale.menuItem.name]) {
+                summary[sale.menuItem.name] += sale.qty
+            } else {
+                summary[sale.menuItem.name] = sale.qty
+            }
+        })
+    })
+    return summary
+})
+
 function timeAgo(date) {
   const diff = (new Date() - new Date(date)) / 1000 / 60
   if (diff < 1) return 'Baru saja'
   return `${Math.floor(diff)} menit lalu`
 }
 
-function isLate(date) {
+function getUrgencyClass(date) {
   const diff = (new Date() - new Date(date)) / 1000 / 60
-  return diff > 15
+  if (diff > 10) return 'status-critical'
+  if (diff > 5) return 'status-warning'
+  return 'status-normal' // Logic change: Explicit normal status
 }
 
 async function updateStatus(id, newStatus) {
@@ -191,7 +232,7 @@ async function updateStatus(id, newStatus) {
 
 // Ensure head meta for full screen feel
 useHead({
-  title: 'Kitchen Display - Kopiz'
+  title: 'KDS - Kopiz'
 })
 
 definePageMeta({
@@ -222,6 +263,82 @@ definePageMeta({
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-border);
+}
+
+/* MAIN LAYOUT: SIDEBAR + KANBAN */
+.kds-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* SIDEBAR STYLES */
+.summary-sidebar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.summary-header {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.summary-header h3 {
+    margin: 0;
+    color: var(--color-primary);
+}
+
+.summary-list {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255,255,255,0.03);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--glass-border);
+}
+
+.summary-qty {
+    background: var(--color-primary);
+    color: white;
+    font-weight: bold;
+    font-size: 1.25rem;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* KANBAN STYLES */
+.kanban-wrapper {
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .kanban-board {
@@ -270,22 +387,31 @@ definePageMeta({
   transition: all 0.3s;
 }
 
-/* LATE WARNING STYLE */
-.late-warning {
+/* URGENCY STATUS STYLES */
+.status-normal {
+    border-left: 4px solid var(--color-success); /* Fresh */
+}
+
+.status-warning {
+    border-left: 4px solid var(--color-warning);
+    border-color: var(--color-warning);
+}
+
+.status-critical {
   border: 2px solid var(--color-danger);
+  border-left: 6px solid var(--color-danger);
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
   animation: pulse 2s infinite;
 }
+
+.ready-card { border-left: 4px solid var(--color-success); border-right: 1px solid var(--color-success); }
+
 
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
   70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
-
-.pending-card { border-left: 4px solid var(--color-warning); }
-.process-card { border-left: 4px solid var(--color-primary); }
-.ready-card { border-left: 4px solid var(--color-success); border-right: 1px solid var(--color-success); }
 
 .card-header {
   display: flex;
@@ -399,6 +525,16 @@ definePageMeta({
 }
 
 @media (max-width: 1024px) {
+    .kds-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+    
+    .summary-sidebar {
+        height: auto;
+        max-height: 200px;
+    }
+
     .kanban-board {
         grid-template-columns: 1fr; /* Stack on mobile */
         overflow-y: auto;

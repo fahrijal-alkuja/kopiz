@@ -1084,7 +1084,7 @@ function editUnpaidOrder(order) {
 
 .main-content {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   margin-top: 1.5rem;
 }

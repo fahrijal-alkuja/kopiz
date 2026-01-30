@@ -21,14 +21,27 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // 3. Update Material Stock and Cost Per Unit
-    // For simplicity, we update costPerUnit to the latest purchase price
-    // A more advanced system would use Weighted Average Cost (WAC)
+    // 3. Update Material Stock and Cost Per Unit (Using Weighted Average Cost)
+    const currentStock = material.stock
+    const currentCost = material.costPerUnit
+    const newStock = currentStock + quantity
+    
+    // Calculate Weighted Average Cost
+    // Formula: ((Total Value Old) + (Total Value New)) / Total Quantity
+    // Prevent division by zero if total stock is 0 (shouldn't happen here as we just added quantity)
+    let newCostPerUnit = pricePerUnit
+    
+    if (newStock > 0) {
+      const totalValueOld = currentStock * currentCost
+      const totalValueNew = quantity * pricePerUnit
+      newCostPerUnit = (totalValueOld + totalValueNew) / newStock
+    }
+
     const updatedMaterial = await tx.material.update({
       where: { id: materialId },
       data: {
         stock: { increment: quantity },
-        costPerUnit: pricePerUnit
+        costPerUnit: newCostPerUnit
       }
     })
 

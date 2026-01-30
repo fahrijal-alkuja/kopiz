@@ -164,6 +164,15 @@ function confirmDelete(m) {
   }
 }
 
+const materialModal = ref({
+  show: false
+})
+
+function openAddModal() {
+  resetForm()
+  materialModal.value.show = true
+}
+
 async function saveMaterial() {
   try {
     const method = editingId.value ? 'PUT' : 'POST'
@@ -175,6 +184,7 @@ async function saveMaterial() {
     })
     
     resetForm()
+    materialModal.value.show = false
     refresh()
   } catch (e) {
     showAlert('Error', e.message)
@@ -188,12 +198,10 @@ function editMaterial(m) {
     unit: m.unit,
     stock: m.stock,
     minStock: m.minStock,
-    costPerUnit: m.costPerUnit
+    costPerUnit: m.costPerUnit,
+    totalValue: ''
   }
-}
-
-function cancelEdit() {
-  resetForm()
+  materialModal.value.show = true
 }
 
 function resetForm() {
@@ -211,83 +219,49 @@ function resetForm() {
 
 <template>
   <div>
-    <h1>Manajemen Stok & Bahan Baku</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Manajemen Stok & Bahan Baku</h1>
+        <button v-if="isOwner" @click="openAddModal" class="btn">
+           + Tambah Material
+        </button>
+    </div>
 
-    <div style="display: grid; gap: 2rem; margin-top: 2rem;" :style="{ gridTemplateColumns: isOwner ? '1fr 2fr' : '1fr' }">
-      <!-- Form Input Material (OWNER ONLY) -->
-      <div v-if="isOwner" class="card">
-        <h3>{{ editingId ? 'Update Material' : 'Tambah Material Baru' }}</h3>
-        <form @submit.prevent="saveMaterial">
-          <label>Nama Bahan</label>
-          <input v-model="form.name" type="text" class="input" required placeholder="Contoh: Biji Kopi, Susu, Gula">
-          
-          <label>Satuan</label>
-          <select v-model="form.unit" class="select" required>
-            <option value="gram">Gram (gr)</option>
-            <option value="ml">Mililiter (ml)</option>
-            <option value="pcs">Pcs / Biji</option>
-          </select>
-
-          <label>Stok Saat Ini (Awal)</label>
-          <input v-model="form.stock" type="number" step="0.01" class="input" required placeholder="0">
-
-          <label v-if="!editingId">Total Nilai Stok Awal (Rp)</label>
-          <input v-if="!editingId" v-model="form.totalValue" type="number" class="input" placeholder="Contoh: 150000">
-
-          <label>Harga per Satuan (Rp)</label>
-          <input v-model="form.costPerUnit" type="number" step="0.01" class="input" required placeholder="Contoh: 250">
-          
-          <label>Stok Minimum (Alert)</label>
-          <input v-model="form.minStock" type="number" step="0.01" class="input" required placeholder="Contoh: 100">
-          <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 1rem;">
-            *Muncul peringatan jika stok di bawah nilai ini.
-          </div>
-
-          <div style="display: flex; gap: 1rem;">
-            <button type="submit" class="btn" style="flex: 1;">{{ editingId ? 'Simpan Perubahan' : 'Tambah' }}</button>
-            <button v-if="editingId" type="button" class="btn btn-danger" @click="cancelEdit">Batal</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- List Material -->
-      <div class="card">
-        <h3>Daftar Bahan Baku</h3>
-        <div v-if="materials && materials.length > 0" class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>Stok</th>
-                <th style="text-align: right;">Min. Stok</th>
-                <th style="text-align: right;">Biaya/Unit</th>
-                <th style="text-align: right;" :style="{ width: isOwner ? '180px' : '100px' }">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="m in materials" :key="m.id">
-                <td>{{ m.name }}</td>
-                <td :style="{ color: m.stock < m.minStock ? 'var(--color-danger)' : 'inherit', fontWeight: m.stock < m.minStock ? 'bold' : 'normal' }">
-                  {{ m.stock.toLocaleString() }} {{ m.unit }}
-                  <span v-if="m.stock < m.minStock" style="font-size: 0.7rem; display: block;">⚠️ Stok Rendah</span>
-                </td>
-                <td style="text-align: right;">{{ m.minStock.toLocaleString() }}</td>
-                <td style="text-align: right;">Rp {{ m.costPerUnit.toLocaleString('id-ID') }}</td>
-                <td style="text-align: right; white-space: nowrap;">
-                  <button v-if="isOwner" @click="editMaterial(m)" class="btn-icon" title="Edit">✏️</button>
-                  <button @click="openPurchaseModal(m)" class="btn-icon" style="color: var(--color-success);" title="Beli Stok">🛒</button>
-                  <button @click="openWasteModal(m)" class="btn-icon" style="color: var(--color-warning);" title="Waste/Rusak">💥</button>
-                  <button @click="fetchHistory(m)" class="btn-icon" style="color: var(--color-primary);" title="Riwayat">📜</button>
-                  <button v-if="isOwner" @click="confirmDelete(m)" class="btn-icon" style="color: #ef4444;" title="Hapus">🗑️</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
-          Belum ada bahan baku terdaftar.
-        </div>
-      </div>
+    <!-- List Material -->
+    <div class="card">
+    <div v-if="materials && materials.length > 0" class="table-container">
+        <table>
+        <thead>
+            <tr>
+            <th>Nama</th>
+            <th>Stok</th>
+            <th style="text-align: right;">Min. Stok</th>
+            <th style="text-align: right;">Biaya/Unit</th>
+            <th style="text-align: right;" :style="{ width: isOwner ? '180px' : '100px' }">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="m in materials" :key="m.id">
+            <td>{{ m.name }}</td>
+            <td :style="{ color: m.stock < m.minStock ? 'var(--color-danger)' : 'inherit', fontWeight: m.stock < m.minStock ? 'bold' : 'normal' }">
+                {{ m.stock.toLocaleString() }} {{ m.unit }}
+                <span v-if="m.stock < m.minStock" style="font-size: 0.7rem; display: block;">⚠️ Stok Rendah</span>
+            </td>
+            <td style="text-align: right;">{{ m.minStock.toLocaleString() }}</td>
+            <td style="text-align: right;">Rp {{ m.costPerUnit.toLocaleString('id-ID') }}</td>
+            <td style="text-align: right; white-space: nowrap;">
+                <button v-if="isOwner" @click="editMaterial(m)" class="btn-icon" title="Edit">✏️</button>
+                <button @click="openPurchaseModal(m)" class="btn-icon" style="color: var(--color-success);" title="Beli Stok">🛒</button>
+                <button @click="openWasteModal(m)" class="btn-icon" style="color: var(--color-warning);" title="Waste/Rusak">💥</button>
+                <button @click="fetchHistory(m)" class="btn-icon" style="color: var(--color-primary);" title="Riwayat">📜</button>
+                <button v-if="isOwner" @click="confirmDelete(m)" class="btn-icon" style="color: #ef4444;" title="Hapus">🗑️</button>
+            </td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+    <div v-else style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
+        Belum ada bahan baku terdaftar.
+    </div>
     </div>
 
     <!-- Riwayat Stok (Mutasi) -->
@@ -330,7 +304,7 @@ function resetForm() {
       </div>
     </div>
 
-    <!-- Modern Modals -->
+    <!-- Alert Modal -->
     <BaseModal
       v-model:show="modal.show"
       :title="modal.title"
@@ -339,6 +313,44 @@ function resetForm() {
       :confirm-text="modal.confirmText"
       @confirm="modal.onConfirm"
     />
+
+    <!-- Add/Edit Material Modal -->
+    <BaseModal
+      v-model:show="materialModal.show"
+      :title="editingId ? 'Edit Material' : 'Tambah Material Baru'"
+      :confirm-text="editingId ? 'Simpan Perubahan' : 'Tambah'"
+      :show-cancel="true"
+      @confirm="saveMaterial"
+    >
+        <div style="padding: 1rem 0;">
+            <label>Nama Bahan</label>
+            <input v-model="form.name" type="text" class="input" required placeholder="Contoh: Biji Kopi, Susu, Gula">
+            
+            <label>Satuan</label>
+            <select v-model="form.unit" class="select" required>
+            <option value="gram">Gram (gr)</option>
+            <option value="ml">Mililiter (ml)</option>
+            <option value="pcs">Pcs / Biji</option>
+            </select>
+
+            <label>Stok Saat Ini (Awal)</label>
+            <input v-model="form.stock" type="number" step="0.01" class="input" required placeholder="0">
+
+            <div v-if="!editingId">
+                <label>Total Nilai Stok Awal (Rp)</label>
+                <input v-model="form.totalValue" type="number" class="input" placeholder="Contoh: 150000">
+            </div>
+
+            <label>Harga per Satuan (Rp)</label>
+            <input v-model="form.costPerUnit" type="number" step="0.01" class="input" required placeholder="Contoh: 250">
+            
+            <label>Stok Minimum (Alert)</label>
+            <input v-model="form.minStock" type="number" step="0.01" class="input" required placeholder="Contoh: 100">
+            <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 1rem;">
+            *Muncul peringatan jika stok di bawah nilai ini.
+            </div>
+        </div>
+    </BaseModal>
 
     <!-- Purchase Modal -->
     <BaseModal
