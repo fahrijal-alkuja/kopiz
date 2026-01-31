@@ -4,24 +4,39 @@
       <div class="receipt">
         <div class="header">
           <h2>Kopi Z</h2>
-          <p>Premium Quality, Bold Character</p>
-          <p>Telp: 0853-9346-4054</p>
-          <div class="separator">================================</div>
+          <p class="subtitle">Premium Quality, Bold Character</p>
+          <p class="contact">Telp: 0853-9346-4054</p>
+          <div class="separator-double"></div>
         </div>
         
         <div class="meta">
-          <p>Tgl: {{ formatDate(transaction.date) }}</p>
-          <p>No: #{{ formatId(transaction.id) }}</p>
-          <p>Kasir: {{ transaction.cashier || 'Barista' }}</p>
-          <div class="separator">--------------------------------</div>
+          <div class="meta-row">
+            <span>Tgl:</span>
+            <span>{{ formatDate(transaction.date) }}</span>
+          </div>
+          <div class="meta-row">
+            <span>No:</span>
+            <span>#{{ formatId(transaction.id) }}</span>
+          </div>
+          <div class="meta-row">
+            <span>Kasir:</span>
+            <span>{{ transaction.cashier || 'Barista' }}</span>
+          </div>
+          <div class="separator-dashed"></div>
         </div>
 
         <div class="items">
+          <div class="meta-row">
+           <span>Item</span>  
+           <span>Harga</span>
+          </div>
+           <div class="separator-dashed"></div>
+
           <div v-for="(item, index) in transaction.items" :key="index" class="item-row">
             <div class="item-name">{{ item.qty }}x {{ item.name }}</div>
             <div class="item-total">{{ formatCurrency(item.total) }}</div>
           </div>
-          <div class="separator">--------------------------------</div>
+          <div class="separator-dashed"></div>
         </div>
 
         <div class="summary">
@@ -39,7 +54,7 @@
             <span>Kembali</span>
             <span>{{ formatCurrency(transaction.change || 0) }}</span>
           </div>
-          <div class="separator">================================</div>
+          <div class="separator-double"></div>
         </div>
 
         <div class="footer">
@@ -125,48 +140,65 @@ function formatId(id) {
   
   .receipt {
     width: 100%;
-    /* Matching the printer's native "console" look from the test print */
-    font-family: 'Courier New', Courier, monospace; 
-    font-size: 12px; /* Matches closer to the 12x24 dot matrix height */
-    line-height: 1.2;
+    /* Use a crisp monospace font stack for better thermal printing */
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+    font-size: 11px; /* Optimal size for 58mm */
+    line-height: 1.3;
     color: #000;
-    font-weight: bold; /* Keep bold to overcome thermal fading, though native is 100% density */
-    padding-right: 0;
+    font-weight: 600; /* Semi-bold for better contrast */
+    padding-right: 2mm; /* Small padding to prevent cutting off */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Separator matches the layout perfectly now */
-  .separator {
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold;
-    margin: 4px 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-align: center;
+  /* CSS Borders instead of text characters for cleaner lines */
+  .separator-dashed {
+    border-bottom: 1px dashed #000;
+    margin: 6px 0;
+    width: 100%;
+  }
+
+  .separator-double {
+    border-bottom: 3px double #000; /* Double line effect */
+    margin: 8px 0;
+    width: 100%;
   }
 
   h2 {
-    font-size: 16px; /* Slightly larger for the store name */
-    margin: 0 0 4px 0;
+    font-size: 18px;
+    margin: 0 0 2px 0;
     text-align: center;
-    font-weight: 900;
+    font-weight: 800;
     text-transform: uppercase;
+    letter-spacing: 1px;
   }
 
-  p {
-    margin: 2px 0;
-    font-size: 12px;
-    font-weight: bold;
+  .subtitle {
+    font-size: 10px;
+    margin: 0;
+    text-align: center;
+    font-weight: normal;
+  }
+
+  .contact {
+    font-size: 10px;
+    margin: 2px 0 0 0;
+    text-align: center;
   }
 
   .header, .footer {
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
   }
 
   .items {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   .item-row {
@@ -180,12 +212,10 @@ function formatId(id) {
      flex: 1;
      margin-right: 4px;
      white-space: normal; 
-     font-weight: bold;
    }
    
    .item-total {
      white-space: nowrap;
-     font-weight: bold;
    }
  
    .row {
@@ -195,15 +225,13 @@ function formatId(id) {
    }
    
    .total-row {
-     font-weight: 900;
+     font-weight: 800;
      font-size: 14px;
-     margin-top: 6px;
-     border-top: 1px dashed black;
-     padding-top: 4px;
+     margin-top: 4px;
    }
  
    .total-amount {
-     font-weight: 900;
+     font-weight: 800;
    }
 }
 </style>
