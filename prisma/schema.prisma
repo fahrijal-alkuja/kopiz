@@ -162,3 +162,27 @@ model ActivityLog {
   createdAt   DateTime @default(now())
   user        User?    @relation(fields: [userId], references: [id])
 }
+
+model Raffle {
+  id           Int            @id @default(autoincrement())
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  drawDate     DateTime?
+  status       String         @default("ACTIVE") // ACTIVE, CLOSED, DRAWN
+  minimumSpend Float          @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  winners      RaffleWinner[]
+}
+
+model RaffleWinner {
+  id            Int      @id @default(autoincrement())
+  raffleId      Int
+  transactionId String
+  customerName  String?
+  phone         String?
+  prize         String?
+  drawnAt       DateTime @default(now())
+  raffle        Raffle   @relation(fields: [raffleId], references: [id])
+}

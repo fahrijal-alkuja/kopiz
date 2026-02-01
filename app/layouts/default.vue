@@ -79,6 +79,7 @@ async function syncOfflineSales() {
           <li><NuxtLink to="/inventory" class="nav-link">📦 Stok Bahan</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/menu" class="nav-link">☕ Master Menu</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/promo" class="nav-link">🏷️ Manajemen Promo</NuxtLink></li>
+          <li v-if="isOwner"><NuxtLink to="/raffles" class="nav-link">🎟️ Manajemen Undian</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/users" class="nav-link">👥 Manajemen Barista</NuxtLink></li>
           
           

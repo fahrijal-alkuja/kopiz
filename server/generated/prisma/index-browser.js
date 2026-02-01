@@ -251,6 +251,28 @@ exports.Prisma.ActivityLogScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.RaffleScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  drawDate: 'drawDate',
+  status: 'status',
+  minimumSpend: 'minimumSpend',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RaffleWinnerScalarFieldEnum = {
+  id: 'id',
+  raffleId: 'raffleId',
+  transactionId: 'transactionId',
+  customerName: 'customerName',
+  phone: 'phone',
+  prize: 'prize',
+  drawnAt: 'drawnAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -290,7 +312,9 @@ exports.Prisma.ModelName = {
   User: 'User',
   MaterialPurchase: 'MaterialPurchase',
   Promo: 'Promo',
-  ActivityLog: 'ActivityLog'
+  ActivityLog: 'ActivityLog',
+  Raffle: 'Raffle',
+  RaffleWinner: 'RaffleWinner'
 };
 
 /**
