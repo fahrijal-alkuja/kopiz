@@ -49,7 +49,7 @@
           </div>
           
           <div class="row">
-            <span>Bayar ({{ transaction.paymentMethod }})</span>
+            <span>Bayar ({{ formatPaymentMethod(transaction.paymentMethod) }})</span>
             <span>{{ transaction.cashProvided ? formatCurrency(transaction.cashProvided) : formatCurrency(transaction.total) }}</span>
           </div>
           
@@ -94,6 +94,14 @@ function formatDate(date) {
 function formatId(id) {
   if (!id) return ''
   return String(id).substring(0, 8).toUpperCase()
+}
+
+function formatPaymentMethod(method) {
+  if (!method) return '-'
+  const m = method.toUpperCase()
+  if (m === 'CASH') return 'Tunai'
+  if (m === 'QRIS') return 'QRIS'
+  return method 
 }
 </script>
 
