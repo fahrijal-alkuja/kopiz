@@ -3,45 +3,43 @@
     <div v-if="transaction" id="receipt-template" class="print-only">
       <div class="receipt">
         <div class="header">
-          <h2>Kopi Z</h2>
+          <!-- Logo removed for better thermal clarity, using large text instead -->
+          <h2 class="brand-name">KOPI Z</h2>
           <p class="subtitle">Premium Quality, Bold Character</p>
           <p class="contact">Telp: 0853-9346-4054</p>
-          <div class="separator-double"></div>
         </div>
         
+        <div class="divider-solid"></div>
+
         <div class="meta">
           <div class="meta-row">
-            <span>Tgl:</span>
-            <span>{{ formatDate(transaction.date) }}</span>
+            <span>Tgl : {{ formatDate(transaction.date) }}</span>
           </div>
           <div class="meta-row">
-            <span>No:</span>
-            <span>#{{ formatId(transaction.id) }}</span>
+            <span>No  : #{{ formatId(transaction.id) }}</span>
           </div>
           <div class="meta-row">
-            <span>Kasir:</span>
-            <span>{{ transaction.cashier || 'Barista' }}</span>
+            <span>Kasir: {{ transaction.cashier || 'Barista' }}</span>
           </div>
-          <div class="separator-dashed"></div>
         </div>
+
+        <div class="divider-solid"></div>
 
         <div class="items">
-          <div class="meta-row">
-           <span>Item</span>  
-           <span>Harga</span>
-          </div>
-           <div class="separator-dashed"></div>
-
           <div v-for="(item, index) in transaction.items" :key="index" class="item-row">
-            <div class="item-name">{{ item.qty }}x {{ item.name }}</div>
-            <div class="item-total">{{ formatCurrency(item.total) }}</div>
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-details">
+              <span class="qty">{{ item.qty }}x</span>
+              <span class="price">{{ formatCurrency(item.total) }}</span>
+            </div>
           </div>
-          <div class="separator-dashed"></div>
         </div>
+
+        <div class="divider-solid"></div>
 
         <div class="summary">
           <div class="row total-row">
-            <span>Total</span>
+            <span>TOTAL</span>
             <span class="total-amount">{{ formatCurrency(transaction.total) }}</span>
           </div>
           
@@ -54,8 +52,9 @@
             <span>Kembali</span>
             <span>{{ formatCurrency(transaction.change || 0) }}</span>
           </div>
-          <div class="separator-double"></div>
         </div>
+
+        <div class="divider-double"></div>
 
         <div class="footer">
           <p>Terima Kasih</p>
@@ -89,36 +88,27 @@ function formatDate(date) {
 
 function formatId(id) {
   if (!id) return ''
-  // Shorten UUID to first 8 chars for cleaner receipt
   return String(id).substring(0, 8).toUpperCase()
 }
 </script>
 
 <style>
-/* 
-  Global Print Styles 
-  Must use Teleport to body so we can hide everything else effectively 
-*/
-
 @media print {
-  /* 1. Hide everything on the body by default */
   body > * {
     display: none !important;
   }
   
-  /* 2. Show ONLY the receipt container (which is Teleported to become a direct child of body) */
   body > #receipt-template {
     display: block !important;
     position: absolute;
     left: 0;
     top: 0;
-    width: 58mm; /* Standard Thermal Paper Width */
+    width: 58mm;
     margin: 0;
     padding: 0;
     background: white;
   }
   
-  /* 3. Reset page margins to zero to avoid browser headers/footers pushing content */
   @page {
     size: 58mm auto; 
     margin: 0;
@@ -127,111 +117,124 @@ function formatId(id) {
 </style>
 
 <style scoped>
-/* Screen styles: Hidden by default */
 .print-only {
   display: none;
 }
 
 @media print {
-  /* On print media, we ensure the container itself block is visible (parent visibility handled by global query above) */
   .print-only {
     display: block;
   }
   
   .receipt {
     width: 100%;
-    /* Use a crisp monospace font stack for better thermal printing */
-    font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
-    font-size: 11px; /* Optimal size for 58mm */
-    line-height: 1.3;
+    /* Modern, readable font stack */
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    line-height: 1.4;
     color: #000;
-    font-weight: 600; /* Semi-bold for better contrast */
-    padding-right: 2mm; /* Small padding to prevent cutting off */
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    padding-right: 2mm;
   }
 
-  /* CSS Borders instead of text characters for cleaner lines */
-  .separator-dashed {
-    border-bottom: 1px dashed #000;
-    margin: 6px 0;
-    width: 100%;
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 10px;
   }
 
-  .separator-double {
-    border-bottom: 3px double #000; /* Double line effect */
+  .brand-name {
+    font-size: 26px; /* Increased from 20px for logo-like impact */
+    margin: 0;
+    font-weight: 900; /* Extra bold */
+    text-transform: uppercase;
+    letter-spacing: 2px; /* Wider spacing for elegance */
+    line-height: 1.2;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Ensure clean sans-serif */
+  }
+
+  .subtitle {
+    font-size: 9px;
+    margin: 2px 0;
+    font-style: italic;
+  }
+
+  .contact {
+    font-size: 9px;
+    margin: 0;
+  }
+
+  /* Dividers */
+  .divider-solid {
+    border-bottom: 1px solid #000;
     margin: 8px 0;
     width: 100%;
   }
 
-  h2 {
-    font-size: 18px;
-    margin: 0 0 2px 0;
-    text-align: center;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  .divider-double {
+    border-bottom: 3px double #000;
+    margin: 10px 0;
+    width: 100%;
   }
 
-  .subtitle {
-    font-size: 10px;
-    margin: 0;
-    text-align: center;
-    font-weight: normal;
+  /* Meta Info */
+  .meta {
+    margin-bottom: 8px;
   }
-
-  .contact {
-    font-size: 10px;
-    margin: 2px 0 0 0;
-    text-align: center;
-  }
-
-  .header, .footer {
-    text-align: center;
-    margin-bottom: 5px;
-  }
-
+  
   .meta-row {
+    font-size: 10px;
+  }
+
+  /* Items */
+  .items {
+    margin-bottom: 8px;
+  }
+
+  .item-row {
+    margin-bottom: 4px;
+    /* Optional: separator between items for clarity */
+  }
+
+  .item-name {
+    font-weight: 600;
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+
+  .item-details {
+    display: flex;
+    justify-content: space-between;
+    padding-left: 0; /* Keep aligned left */
+  }
+
+  .qty {
+    font-weight: bold;
+  }
+
+  /* Summary */
+  .row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 2px;
   }
 
-  .items {
+  .total-row {
+    font-size: 14px;
+    font-weight: 900;
+    margin-top: 5px;
     margin-bottom: 5px;
   }
 
-  .item-row {
-     display: flex;
-     justify-content: space-between;
-     align-items: flex-start;
-     margin-bottom: 4px;
-   }
-   
-   .item-name {
-     flex: 1;
-     margin-right: 4px;
-     white-space: normal; 
-   }
-   
-   .item-total {
-     white-space: nowrap;
-   }
- 
-   .row {
-     display: flex;
-     justify-content: space-between;
-     margin-bottom: 2px;
-   }
-   
-   .total-row {
-     font-weight: 800;
-     font-size: 14px;
-     margin-top: 4px;
-   }
- 
-   .total-amount {
-     font-weight: 800;
-   }
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 10px;
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  
+  .footer p {
+    margin: 2px 0;
+  }
 }
 </style>
