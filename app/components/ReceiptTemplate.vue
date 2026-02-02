@@ -193,6 +193,8 @@ function formatId(id) {
   }
   
   .meta-row {
+    display: flex;
+    justify-content: space-between;
     font-size: 10px;
   }
 
