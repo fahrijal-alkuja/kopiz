@@ -26,6 +26,11 @@
         <div class="divider-solid"></div>
 
         <div class="items">
+          <div class="meta-row header-row">
+            <span>ITEM</span>
+            <span>HARGA</span>
+          </div>
+          <div class="divider-dashed"></div>
           <div v-for="(item, index) in transaction.items" :key="index" class="item-row">
             <div class="item-name">{{ item.name }}</div>
             <div class="item-details">
@@ -176,6 +181,12 @@ function formatId(id) {
     width: 100%;
   }
 
+  .divider-dashed {
+    border-bottom: 1px dashed #000;
+    margin: 4px 0 8px 0;
+    width: 100%;
+  }
+
   /* Meta Info */
   .meta {
     margin-bottom: 8px;
@@ -183,6 +194,12 @@ function formatId(id) {
   
   .meta-row {
     font-size: 10px;
+  }
+
+  .header-row {
+    font-weight: bold;
+    font-size: 9px;
+    margin-bottom: 2px;
   }
 
   /* Items */
