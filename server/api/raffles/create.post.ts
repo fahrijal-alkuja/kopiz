@@ -3,10 +3,10 @@ import { z } from 'zod'
 
 const createRaffleSchema = z.object({
   name: z.string().min(3),
-  startDate: z.string().or(z.date()), // Accepts ISO string
-  endDate: z.string().or(z.date()),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
   minimumSpend: z.number().default(0),
-  drawDate: z.string().or(z.date()).optional()
+  drawDate: z.coerce.date().optional()
 })
 
 export default defineEventHandler(async (event) => {
@@ -31,10 +31,10 @@ export default defineEventHandler(async (event) => {
   const raffle = await prisma.raffle.create({
     data: {
       name: data.name,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
+      startDate: data.startDate,
+      endDate: data.endDate,
       minimumSpend: data.minimumSpend,
-      drawDate: data.drawDate ? new Date(data.drawDate) : null,
+      drawDate: data.drawDate || null,
       status: 'ACTIVE'
     }
   })
