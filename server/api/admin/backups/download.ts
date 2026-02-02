@@ -16,9 +16,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const filepath = getBackupPath(filename)
+  console.log('Downloading backup from:', filepath) // Debug log
+
   if (!fs.existsSync(filepath)) {
+    console.error('Backup file not found at:', filepath)
     throw createError({ statusCode: 404, statusMessage: 'File not found' })
   }
+
+  setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
+  setHeader(event, 'Content-Type', 'application/sql')
 
   return sendStream(event, fs.createReadStream(filepath))
 })

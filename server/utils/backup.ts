@@ -6,7 +6,10 @@ const BACKUP_DIR = path.resolve(process.cwd(), 'storage/backups')
 
 // Ensure backup dir exists
 if (!fs.existsSync(BACKUP_DIR)) {
+  console.log('Creating backup directory at:', BACKUP_DIR)
   fs.mkdirSync(BACKUP_DIR, { recursive: true })
+} else {
+  console.log('Backup directory exists at:', BACKUP_DIR)
 }
 
 export const performBackup = async () => {
