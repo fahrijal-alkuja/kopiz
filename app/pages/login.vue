@@ -12,7 +12,13 @@
       <Transition name="fade" mode="out-in">
         <!-- STEP 1: SELECT USER -->
         <div v-if="!selectedUser" class="user-grid" key="users">
-          <div v-for="user in users" :key="user.id" class="user-btn" @click="selectUser(user)">
+          <div v-if="pending" class="loading-msg">Memuat pengguna...</div>
+          <div v-else-if="status === 'error'" class="error-msg">Gagal memuat pengguna. Cek koneksi.</div>
+          <div v-else-if="!users || users.length === 0" class="empty-msg">
+            Belum ada pengguna.<br>
+            <small>Silakan hubungi administrator.</small>
+          </div>
+          <div v-else v-for="user in users" :key="user.id" class="user-btn" @click="selectUser(user)">
              <div class="user-avatar">
               {{ user.name.charAt(0).toUpperCase() }}
             </div>
@@ -50,7 +56,8 @@ definePageMeta({
   layout: false
 })
 
-const { data: users } = await useFetch('/api/auth/users')
+const { data: users, pending, status } = await useFetch('/api/auth/users', { lazy: true })
+
 const selectedUser = ref(null)
 const pin = ref('')
 const error = ref('')
@@ -261,5 +268,22 @@ function resetUser() {
 
 @keyframes bounce {
   to { transform: translateY(-8px); opacity: 0.5; }
+}
+
+.loading-msg, .empty-msg {
+  grid-column: span 2;
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-radius: 0.5rem;
+  border: 1px dashed var(--color-border);
+}
+
+.error-msg {
+  text-align: center;
+  color: var(--color-danger);
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
 }
 </style>

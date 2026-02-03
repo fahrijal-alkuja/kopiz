@@ -9,6 +9,7 @@ export default defineEventHandler((event) => {
     '/api/auth/login',
     '/api/auth/refresh',
     '/api/auth/seed', // Has internal env check
+    '/api/auth/users', // Public user list for login
     '/api/customer/order'
   ]
 
