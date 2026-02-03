@@ -245,29 +245,52 @@ export default defineEventHandler(async (event) => {
       await prisma.$transaction(async (tx: any) => {
         for (const sale of sales) {
           // Restore stock
-          if (sale.menuItem && sale.menuItem.recipes) {
-            for (const recipeItem of sale.menuItem.recipes) {
-              const updatedMaterial = await tx.material.update({
-                where: { id: recipeItem.materialId },
-                data: {
-                  stock: {
-                    increment: recipeItem.quantity * sale.qty
-                  }
-                }
-              })
+          // Restore stock
+          if (sale.menuItem) {
+              // 1. Retail Item Restoration
+              if (sale.menuItem.isRetail && sale.menuItem.materialId) {
+                  const updatedMaterial = await tx.material.update({
+                    where: { id: sale.menuItem.materialId },
+                    data: { stock: { increment: sale.qty } }
+                  })
 
-              // Log movement
-              await (tx as any).materialLog.create({
-                data: {
-                  materialId: recipeItem.materialId,
-                  type: 'IN',
-                  quantity: recipeItem.quantity * sale.qty,
-                  balanceAfter: updatedMaterial.stock,
-                  reason: `Void Trx #${body.transactionId.slice(0,8)}...`,
-                  createdAt: new Date()
+                  await (tx as any).materialLog.create({
+                    data: {
+                      materialId: sale.menuItem.materialId,
+                      type: 'IN',
+                      quantity: sale.qty,
+                      balanceAfter: updatedMaterial.stock,
+                      reason: `Void Trx #${body.transactionId.slice(0,8)} (Retail)`,
+                      createdAt: new Date()
+                    }
+                  })
+              }
+
+              // 2. Recipe Ingredients Restoration
+              if (sale.menuItem.recipes) {
+                for (const recipeItem of sale.menuItem.recipes) {
+                  const updatedMaterial = await tx.material.update({
+                    where: { id: recipeItem.materialId },
+                    data: {
+                      stock: {
+                        increment: recipeItem.quantity * sale.qty
+                      }
+                    }
+                  })
+
+                  // Log movement
+                  await (tx as any).materialLog.create({
+                    data: {
+                      materialId: recipeItem.materialId,
+                      type: 'IN',
+                      quantity: recipeItem.quantity * sale.qty,
+                      balanceAfter: updatedMaterial.stock,
+                      reason: `Void Trx #${body.transactionId.slice(0,8)}...`,
+                      createdAt: new Date()
+                    }
+                  })
                 }
-              })
-            }
+              }
           }
         }
 
@@ -310,29 +333,52 @@ export default defineEventHandler(async (event) => {
 
     await prisma.$transaction(async (tx: any) => {
       // Restore stock
-      if (sale.menuItem && sale.menuItem.recipes) {
-        for (const recipeItem of sale.menuItem.recipes) {
-          const updatedMaterial = await tx.material.update({
-            where: { id: recipeItem.materialId },
-            data: {
-              stock: {
-                increment: recipeItem.quantity * sale.qty
-              }
-            }
-          })
+      // Restore stock
+      if (sale.menuItem) {
+          // 1. Retail restoration
+          if (sale.menuItem.isRetail && sale.menuItem.materialId) {
+             const updatedMaterial = await tx.material.update({
+                where: { id: sale.menuItem.materialId },
+                data: { stock: { increment: sale.qty } }
+             })
+             
+             await (tx as any).materialLog.create({
+                data: {
+                  materialId: sale.menuItem.materialId,
+                  type: 'IN',
+                  quantity: sale.qty,
+                  balanceAfter: updatedMaterial.stock,
+                  reason: `Batal Item #${sale.id} (Retail)`,
+                  createdAt: new Date()
+                }
+             })
+          }
 
-          // Log movement
-          await (tx as any).materialLog.create({
-            data: {
-              materialId: recipeItem.materialId,
-              type: 'IN',
-              quantity: recipeItem.quantity * sale.qty,
-              balanceAfter: updatedMaterial.stock,
-              reason: `Pembatalan Transaksi #${sale.id}`,
-              createdAt: new Date()
+          // 2. Recipe restoration
+          if (sale.menuItem.recipes) {
+            for (const recipeItem of sale.menuItem.recipes) {
+              const updatedMaterial = await tx.material.update({
+                where: { id: recipeItem.materialId },
+                data: {
+                  stock: {
+                    increment: recipeItem.quantity * sale.qty
+                  }
+                }
+              })
+
+              // Log movement
+              await (tx as any).materialLog.create({
+                data: {
+                  materialId: recipeItem.materialId,
+                  type: 'IN',
+                  quantity: recipeItem.quantity * sale.qty,
+                  balanceAfter: updatedMaterial.stock,
+                  reason: `Pembatalan Transaksi #${sale.id}`,
+                  createdAt: new Date()
+                }
+              })
             }
-          })
-        }
+          }
       }
 
       // Delete sale

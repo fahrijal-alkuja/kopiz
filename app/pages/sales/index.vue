@@ -21,6 +21,14 @@
               🛒 Kasir
             </button>
             <button 
+              @click="viewIncomingOrders" 
+              :class="['tab-btn', { active: showIncomingModal }]"
+              title="Pesanan dari QR"
+              style="position: relative;"
+            >
+              📱 Pesanan Masuk <span v-if="incomingOrders.length > 0" class="badge-count" style="background: var(--color-primary);">{{ incomingOrders.length }}</span>
+            </button>
+            <button 
               @click="showUnpaidModal = true" 
               :class="['tab-btn', { active: showUnpaidModal }]"
               title="Lihat Tagihan Belum Lunas"
@@ -483,6 +491,64 @@
       </template>
     </BaseModal>
 
+    <!-- INCOMING ORDERS MODAL -->
+    <BaseModal v-model:show="showIncomingModal" title="Pesanan Masuk (QR)" max-width="600px">
+        <div v-if="incomingOrders.length === 0" style="text-align: center; padding: 3rem; color: var(--color-text-muted);">
+            <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📭</div>
+            <p>Belum ada pesanan baru.</p>
+        </div>
+        
+        <div v-else class="incoming-list" style="display: flex; flex-direction: column; gap: 1rem;">
+             <div v-for="order in incomingOrders" :key="order.id" class="incoming-card" style="background: rgba(255,255,255,0.03); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem;">
+                 <!-- Header -->
+                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <span style="font-weight: 800; font-size: 1.1rem;">{{ order.customerName || 'Pelanggan' }}</span>
+                            <span :style="getTableBadgeStyle(order.tableNumber)">
+                                {{ formatTableNumber(order.tableNumber) }}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                             #{{ order.id }} • {{ new Date(order.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}
+                        </div>
+                    </div>
+                    <div style="font-weight: 800; font-size: 1.1rem; color: var(--color-primary);">
+                        Rp {{ order.totalAmount.toLocaleString('id-ID') }}
+                    </div>
+                 </div>
+
+                 <!-- Items -->
+                 <div style="background: rgba(0,0,0,0.2); border-radius: 0.5rem; padding: 0.75rem;">
+                    <div v-for="item in order.sales" :key="item.id" style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                        <span style="color: #e2e8f0;">{{ item.qty }}x {{ item.menuItem?.name }}</span>
+                        <span style="color: var(--color-text-muted);">{{ item.total.toLocaleString() }}</span>
+                    </div>
+                 </div>
+                 
+                 <!-- Actions -->
+                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                     <button @click="rejectOrder(order)" style="padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--color-danger); color: var(--color-danger); background: transparent; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                         Start Cancel ❌
+                     </button>
+                     <button @click="acceptOrder(order)" style="padding: 0.75rem; border-radius: 0.5rem; border: none; background: var(--color-success); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                         Terima Pesanan ✅
+                     </button>
+                 </div>
+             </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; text-align: center;">
+            <button @click="refreshIncoming" class="btn-icon" style="opacity: 0.7; font-size: 0.9rem; background: none; border: none; color: var(--color-text-muted); cursor: pointer;">🔄 Refresh Data</button>
+        </div>
+
+        <template #footer>
+            <button @click="showIncomingModal = false" style="width: 100%; padding: 0.75rem; background: transparent; border: 1px solid var(--glass-border); color: var(--color-text-muted); border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;">
+                Tutup
+            </button>
+        </template>
+    </BaseModal>
+
     <!-- Modern Modals -->
     <BaseModal
       v-model:show="modal.show"
@@ -518,6 +584,55 @@ const { data: sales, refresh: refreshSales } = await useFetch('/api/sales', {
 const { data: unpaidOrdersRaw, refresh: refreshUnpaid } = await useFetch('/api/orders', {
     query: { status: 'PENDING,PROCESS,READY,COMPLETED', limit: 100 }
 })
+
+// === INCOMING ORDERS (QR) ===
+const { data: incomingOrdersRaw, refresh: refreshIncoming } = await useFetch('/api/orders', {
+    query: { status: 'INCOMING', limit: 50 },
+    // refresh: 30000 // Auto refresh every 30s
+})
+
+const incomingOrders = computed(() => incomingOrdersRaw.value || [])
+const showIncomingModal = ref(false)
+
+function viewIncomingOrders() {
+    refreshIncoming()
+    showIncomingModal.value = true
+}
+
+async function acceptOrder(order) {
+    try {
+        await $fetch(`/api/orders/${order.id}/status`, {
+            method: 'PUT',
+            body: { status: 'PENDING' } // Move to Pending (Wait for payment) or PROCESS (Direct to Kitchen)?
+            // If 'PENDING', it goes to Unpaid Bill list. Ideal for "Pay Later".
+            // If 'PROCESS', it goes to Kitchen directly.
+            // Let's assume Accept = Confirm Order -> Kitchen. So PROCESS? 
+            // But usually needs payment first? if Pay Later, then PROCESS is fine.
+        })
+        
+        // Print Kitchen Ticket? (Not implemented here, usually KDS handles it)
+        
+        showAlert('Sukses', `Pesanan ${order.customerName} diterima.`)
+        refreshIncoming()
+        refreshUnpaid() // Updates Unpaid/Process list
+    } catch (e) {
+        showAlert('Error', e.message)
+    }
+}
+
+async function rejectOrder(order) {
+    showConfirm('Tolak Pesanan?', 'Pesanan ini akan dihapus permanen via ' + order.customerName, async () => {
+        try {
+            await $fetch('/api/sales', {
+                method: 'DELETE',
+                body: { transactionId: order.transactionId } // Delete by Transaction ID
+            })
+            refreshIncoming()
+        } catch (e) {
+            showAlert('Error', e.message)
+        }
+    })
+}
 // Filter only PAY_LATER locally (since API filter logic might iterate status only? 
 // Actually current API only filters status. Let's filter client side for now.
 const unpaidOrders = computed(() => {
@@ -697,6 +812,21 @@ function showAlert(title, message) {
     confirmClass: 'btn-primary',
     onConfirm: () => {}
   }
+}
+
+function formatTableNumber(table) {
+    if (!table) return 'Meja ?'
+    if (table === 'DINE_IN') return 'Makan di Tempat'
+    if (table === 'TAKEAWAY') return 'Takeaway'
+    if (table === 'DELIVERY') return 'Delivery'
+    return `Meja ${table}`
+}
+
+function getTableBadgeStyle(table) {
+    const base = "font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; "
+    if (table === 'TAKEAWAY') return base + "background: var(--color-warning); color: black;"
+    if (table === 'DELIVERY') return base + "background: #3b82f6; color: white;" // Blue for delivery
+    return base + "background: var(--color-primary); color: white;"
 }
 
 function showConfirm(title, message, onConfirm) {

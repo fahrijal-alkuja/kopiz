@@ -81,6 +81,7 @@ async function syncOfflineSales() {
           <li v-if="isOwner"><NuxtLink to="/promo" class="nav-link">🏷️ Manajemen Promo</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/raffles" class="nav-link">🎟️ Manajemen Undian</NuxtLink></li>
           <li v-if="isOwner"><NuxtLink to="/users" class="nav-link">👥 Manajemen Barista</NuxtLink></li>
+          <li v-if="isOwner"><NuxtLink to="/admin/settings/qr" class="nav-link">🖨️ Cetak QR Meja</NuxtLink></li>
           
           
           <!-- New Admin Links -->

@@ -5,7 +5,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
   if (process.server) return
 
   // Public routes
-  if (to.path === '/login') return
+  if (to.path === '/login' || to.path === '/order') return
 
   // Redirect to login if not logged in
   if (!isLoggedIn.value) {
