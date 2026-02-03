@@ -2,6 +2,13 @@ import prisma from '../../utils/db'
 import bcrypt from 'bcrypt'
 
 export default defineEventHandler(async (event) => {
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({
+      statusCode: 404, // Hide existence or 403 Forbidden
+      statusMessage: 'Not Found'
+    })
+  }
+
   try {
     const saltRounds = 10
     const defaultPin = '123456'
