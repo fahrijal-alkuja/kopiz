@@ -1,4 +1,5 @@
 import prisma from '../../utils/db'
+import { broadcastEvent } from '../../utils/sse'
 import { z } from 'zod'
 
 const createCustomerOrderSchema = z.object({
@@ -148,6 +149,23 @@ export default defineEventHandler(async (event) => {
                 })
            }
       }
+  }
+
+  // BROADCAST SSE EVENT
+  const broadcastData = {
+    id: order.id,
+    type: 'new_order',
+    customerName: order.customerName,
+    tableNumber: order.tableNumber,
+    total: totalAmount,
+    timestamp: new Date()
+  }
+  
+  // Use try-catch for broadcast to ensure order response isn't affected by SSE errors
+  try {
+      broadcastEvent('new-order', broadcastData)
+  } catch (e) {
+      console.error('SSE Broadcast failed:', e)
   }
 
   return { success: true, orderId: order.id, transactionId, message: 'Pesanan diterima, mohon tunggu konfirmasi kasir.' }

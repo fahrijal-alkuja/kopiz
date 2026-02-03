@@ -1,5 +1,8 @@
 <template>
   <div>
+    <!-- Hidden Audio Element for Notifications (Placed at top for guaranteed rendering) -->
+    <audio ref="notificationAudio" class="hidden" style="width: 0; height: 0; position: absolute; visibility: hidden;"></audio>
+
     <!-- Navigation / Header -->
     <div class="pos-header">
       <div class="header-left">
@@ -59,6 +62,34 @@
         </NuxtLink>
       </div>
     </div>
+
+    <!-- AUDIO PERMISSION BUTTON (Floating Icon) -->
+    <button 
+        v-if="showAudioBanner" 
+        @click="enableAudio"
+        title="Aktifkan Suara Notifikasi"
+        style="
+          position: fixed; 
+          bottom: 2rem; 
+          right: 2rem; 
+          z-index: 100000; 
+          background: var(--color-warning); 
+          color: black; 
+          width: 3.5rem; 
+          height: 3.5rem; 
+          border-radius: 50%; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-size: 1.5rem; 
+          border: 4px solid rgba(0,0,0,0.2); 
+          cursor: pointer; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          animation: pulse 2s infinite;
+        "
+    >
+       🔔
+    </button>
 
     <div class="pos-container">
       <!-- Main Content: Menu & History -->
@@ -598,6 +629,79 @@ function viewIncomingOrders() {
     refreshIncoming()
     showIncomingModal.value = true
 }
+
+// === REAL-TIME UPDATES (SSE) ===
+const notificationAudio = ref(null)
+const showAudioBanner = ref(true)
+
+function enableAudio() {
+    console.log('Enable Audio Clicked')
+    console.log('Audio Ref:', notificationAudio.value)
+    
+    if (notificationAudio.value) {
+        notificationAudio.value.src = '/notification1.mp3'
+        // Force volume to max
+        notificationAudio.value.volume = 1.0 
+        
+        const playPromise = notificationAudio.value.play()
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                console.log('Audio activated successfully')
+                showAudioBanner.value = false
+            })
+            .catch(e => {
+                console.error('Audio activation failed:', e)
+                alert('Gagal memutar suara: ' + e.message)
+            })
+        }
+    } else {
+        console.error('Audio Element ref is MISSING')
+        alert('Error: Audio element not found in DOM')
+    }
+}
+
+onMounted(() => {
+  if (import.meta.client) {
+    const eventSource = new EventSource('/api/sse/orders')
+    
+    eventSource.onmessage = (event) => {
+      // Keep alive or generic messages
+    }
+    
+    eventSource.addEventListener('new-order', (event) => {
+       const data = JSON.parse(event.data)
+       console.log('New Order Received:', data)
+       
+       // 1. Play Voice Notification (Random rotation 1-3)
+       try {
+           const sounds = ['/notification1.mp3', '/notification2.mp3', '/notification3.mp3']
+           const randomSound = sounds[Math.floor(Math.random() * sounds.length)]
+           
+           // Use the DOM element reference
+           if (notificationAudio.value) {
+               notificationAudio.value.src = randomSound
+               notificationAudio.value.volume = 1.0
+               notificationAudio.value.play().catch(e => console.log('Audio DOM play failed', e))
+           }
+       } catch (e) {
+           console.log('Notification failed', e)
+       }
+
+       // 2. Show Toast
+       showAlert('Pesanan Baru!', `Meja ${formatTableNumber(data.tableNumber)}: Rp ${data.total.toLocaleString()}`)
+       
+       // 3. Refresh Data
+       refreshIncoming()
+    })
+    
+    // Cleanup
+    onUnmounted(() => {
+      // Clean up logic if needed
+      eventSource.close()
+    })
+  }
+})
 
 async function acceptOrder(order) {
     try {
@@ -1679,5 +1783,11 @@ function editUnpaidOrder(order) {
   background: rgba(59, 130, 246, 0.15);
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
 }
 </style>

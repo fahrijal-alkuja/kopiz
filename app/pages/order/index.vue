@@ -137,7 +137,7 @@
              </div>
              
              <!-- In-Modal Name Input -->
-             <div 
+          <div 
                 style="background: rgba(0,0,0,0.2); border-radius: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; transition: border-color 0.3s;"
                 :style="nameError ? 'border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger);' : ''"
              >
@@ -152,8 +152,29 @@
                     @input="nameError = false"
                  />
              </div>
+             
+             <!-- Address Input (Only for Delivery) -->
+             <div v-if="orderType === 'delivery'" 
+                style="margin-top: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; transition: border-color 0.3s;"
+                :style="addressError ? 'border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger);' : ''"
+             >
+                 <label style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">
+                    Alamat Lengkap (Wajib) <span style="color: var(--color-danger)">*</span>
+                 </label>
+                 <textarea 
+                    v-model="deliveryAddress" 
+                    placeholder="Jalan, Nomor Rumah, Patokan..." 
+                    style="background: transparent; border: none; color: white; font-weight: 600; font-size: 0.9rem; width: 100%; outline: none; resize: none; font-family: inherit;"
+                    rows="2"
+                    @input="addressError = false"
+                 ></textarea>
+             </div>
+
              <div v-show="nameError" style="color: var(--color-danger); font-size: 0.85rem; margin-top: 0.5rem; font-weight: bold; display: flex; align-items: center; gap: 0.25rem;">
                  <span>⚠️</span> Mohon isi nama Anda untuk melanjutkan
+             </div>
+             <div v-show="addressError" style="color: var(--color-danger); font-size: 0.85rem; margin-top: 0.5rem; font-weight: bold; display: flex; align-items: center; gap: 0.25rem;">
+                 <span>⚠️</span> Mohon isi alamat lengkap pengiriman
              </div>
           </div>
 
@@ -282,6 +303,7 @@ const isSubmitting = ref(false)
 const orderSuccess = ref(false)
 const orderId = ref(null)
 const nameError = ref(false)
+const addressError = ref(false)
 
 function formatCurrency(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
@@ -317,6 +339,8 @@ const totalPrice = computed(() => cart.value.reduce((a, b) => a + (b.qty * b.pri
 
 async function submitOrder() {
     isSubmitting.value = true
+    nameError.value = false
+    addressError.value = false
     
     // Validation
     if (cart.value.length === 0) {
@@ -357,12 +381,10 @@ async function submitOrder() {
             return
         }
         if (!deliveryAddress.value) {
-            // We should ideally have a specific error state for address too, but for now reuse nameError or toast
-             // Let's assume we want to highlight address too if possible, but user only asked for name.
-             // But for completeness let's alert.
-            error('Mohon isi Alamat Pengiriman')
-            isSubmitting.value = false
-            return
+             addressError.value = true // Highlight address field
+             error('Mohon isi Alamat Pengiriman')
+             isSubmitting.value = false
+             return
         }
         finalTableNumber = 'DELIVERY'
         finalCustomerName = `${customerName.value} (Antar: ${deliveryAddress.value})`
