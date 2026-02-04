@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   const dailyCash = dailySales.filter(s => s.paymentMethod === 'Cash').reduce((sum, s) => sum + s.total, 0)
   const dailyQris = dailySales.filter(s => s.paymentMethod === 'QRIS').reduce((sum, s) => sum + s.total, 0)
   
-  const dailyHpp = dailyExpenses.filter(e => e.category === 'HPP').reduce((sum, e) => sum + e.amount, 0)
+  const dailyHpp = dailySales.reduce((sum, s) => sum + s.costSnapshot, 0)
   const dailyOps = dailyExpenses.filter(e => e.category === 'OPS').reduce((sum, e) => sum + e.amount, 0)
   const dailyDiscount = dailySales.reduce((sum, s) => sum + (s.discountAmount || 0), 0)
   const dailyGrossProfit = dailyOmset - dailyHpp
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
   })
 
   const monthlyOmset = monthlySales.reduce((sum, s) => sum + s.total, 0)
-  const monthlyHpp = monthlyExpenses.filter(e => e.category === 'HPP').reduce((sum, e) => sum + e.amount, 0)
+  const monthlyHpp = monthlySales.reduce((sum, s) => sum + s.costSnapshot, 0)
   const monthlyOps = monthlyExpenses.filter(e => e.category === 'OPS').reduce((sum, e) => sum + e.amount, 0)
   const monthlyDiscount = monthlySales.reduce((sum, s) => sum + (s.discountAmount || 0), 0)
   const monthlyNetProfit = monthlyOmset - (monthlyHpp + monthlyOps)

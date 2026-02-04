@@ -83,6 +83,44 @@
           </div>
         </div>
       </section>
+      
+      <!-- MENU ANALYTICS DETAILS -->
+      <section v-if="isOwner && productStats" style="margin-bottom: 2rem;">
+        <h3 style="color: var(--color-text-muted); margin-bottom: 1rem;">Analisa Menu (Bulan Ini)</h3>
+        <div class="pos-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Top Profit -->
+            <div class="card">
+                <h4 style="margin-top: 0; color: var(--color-success);">🏆 Paling Menguntungkan (Secara Rupiah)</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li v-for="(item, idx) in productStats.topByProfit" :key="item.id" style="padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>{{ idx + 1 }}. {{ item.name }}</span>
+                            <span style="font-weight: bold; color: var(--color-success);">+ Rp {{ item.totalProfit.toLocaleString('id-ID') }}</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                            Terjual {{ item.totalQty }} | Omset Rp {{ item.totalRevenue.toLocaleString('id-ID') }}
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Worst Selling (Evaluation) -->
+            <div class="card">
+                <h4 style="margin-top: 0; color: var(--color-warning);">⚠️ Butuh Perhatian (Penjualan Terendah)</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li v-for="(item, idx) in productStats.worstByQty" :key="item.id" style="padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>{{ idx + 1 }}. {{ item.name }}</span>
+                            <span style="font-weight: bold; color: var(--color-text);">{{ item.totalQty }} Pcs</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                            Profit/Item: Rp {{ (item.totalProfit / (item.totalQty || 1)).toLocaleString('id-ID') }}
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+      </section>
 
       <!-- DAILY SECTION -->
       <section style="margin-bottom: 3rem;">
@@ -202,18 +240,72 @@ const { data } = await useFetch('/api/dashboard/summary', {
   query: { date: filterDate }
 })
 
+const { data: profitReport } = await useFetch('/api/reports/profit', {
+  query: { 
+    startDate: computed(() => {
+        const d = new Date(filterDate.value)
+        d.setDate(1) // Start of month
+        return d.toISOString()
+    }),
+    endDate: computed(() => {
+        const d = new Date(filterDate.value)
+        d.setMonth(d.getMonth() + 1)
+        d.setDate(0) // End of month
+        return d.toISOString()
+    }),
+    period: 'daily'
+  }
+})
+
+const { data: productStats } = await useFetch('/api/reports/top-products', {
+    query: {
+        startDate: computed(() => {
+            const d = new Date(filterDate.value)
+            d.setDate(1) 
+            return d.toISOString()
+        }),
+        endDate: computed(() => {
+            const d = new Date(filterDate.value)
+            d.setMonth(d.getMonth() + 1)
+            d.setDate(0) 
+            return d.toISOString()
+        })
+    }
+})
+
 // Chart Config
 const chartData = computed(() => {
-  if (!data.value?.monthly?.chartData) return null
+  if (!profitReport.value?.chartData) return null
+  const labels = profitReport.value.chartData.map(d => d.date.split('-')[2]) // Just Day
+  
   return {
-    labels: data.value.monthly.chartData.map(d => d.day),
-    datasets: [{
-      label: 'Omset (Rp)',
-      backgroundColor: '#3b82f6',
-      borderColor: '#3b82f6',
-      data: data.value.monthly.chartData.map(d => d.omset),
-      tension: 0.3
-    }]
+    labels,
+    datasets: [
+      {
+        label: 'Omset (Revenue)',
+        backgroundColor: '#3b82f6',
+        borderColor: '#3b82f6',
+        data: profitReport.value.chartData.map(d => d.revenue),
+        tension: 0.3
+      },
+      {
+        label: 'Modal (HPP)',
+        backgroundColor: '#ef4444',
+        borderColor: '#ef4444',
+        data: profitReport.value.chartData.map(d => d.cost),
+        tension: 0.3,
+        borderDash: [5, 5]
+      },
+      {
+        label: 'Laba (Profit)',
+        backgroundColor: '#10b981',
+        borderColor: '#10b981',
+        data: profitReport.value.chartData.map(d => d.profit),
+        tension: 0.3,
+        fill: true,
+        backgroundColor: 'rgba(16, 185, 129, 0.1)'
+      }
+    ]
   }
 })
 
@@ -221,7 +313,7 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { display: false }
+    legend: { display: true, position: 'top' }
   },
   scales: {
     y: {

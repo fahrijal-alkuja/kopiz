@@ -221,9 +221,14 @@ function resetForm() {
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <h1>Manajemen Stok & Bahan Baku</h1>
-        <button v-if="isOwner" @click="openAddModal" class="btn">
-           + Tambah Material
-        </button>
+        <div v-if="isOwner" style="display: flex; gap: 0.5rem;">
+             <NuxtLink to="/inventory/opname" class="btn" style="background: var(--color-warning); color: #000; text-decoration: none; font-weight: 600;">
+               📋 Stock Opname
+            </NuxtLink>
+            <button @click="openAddModal" class="btn">
+               + Tambah Material
+            </button>
+        </div>
     </div>
 
     <!-- List Material -->
