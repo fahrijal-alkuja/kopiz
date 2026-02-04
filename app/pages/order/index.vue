@@ -217,20 +217,35 @@
        <div v-if="orderSuccess" class="modal-overlay success-overlay">
           <div class="modal-content success-content">
               <div class="success-icon">✅</div>
-              <h2>Pesanan Terkirim!</h2>
-              <p>Mohon tunggu, pesanan Anda sedang kami proses.</p>
+              <h2>Pesanan Diterima!</h2>
               
               <div class="order-id">
-                 ID: #{{ orderId }}
+                 ID: #{{ orderId }} &bull; Total: {{ formatCurrency(lastOrderTotal) }}
               </div>
 
-              <div class="success-info">
+              <!-- DELIVERY: QRIS & WA Logic -->
+              <div v-if="orderType === 'delivery'" style="margin: 1.5rem 0;">
+                  <p style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 1rem;">
+                    Silakan scan QRIS di bawah untuk pembayaran, lalu kirim bukti transfer via WhatsApp agar pesanan diproses.
+                  </p>
+                  
+                  <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 1rem;">
+                    <img src="/qris-payment.jpg" alt="QRIS KopiZ" style="width: 200px; height: auto; display: block;" />
+                  </div>
+
+                  <a :href="whatsappUrl" target="_blank" class="btn-whatsapp">
+                    <span style="font-size: 1.2rem;">📱</span> Konfirmasi & Kirim Bukti Bayar
+                  </a>
+              </div>
+
+              <div class="success-info" v-else>
                   <p v-if="orderType === 'dinein'">Mohon tunggu dipanggil atas nama <b>{{ customerName }}</b></p>
                   <p v-if="orderType === 'takeaway'">Silakan tunggu dipanggil atas nama <b>{{ customerName }}</b></p>
-                  <p v-if="orderType === 'delivery'">Driver akan menghubungi Anda di alamat tujuan.</p>
               </div>
 
-              <button @click="reloadPage" class="btn-primary-full">Buat Pesanan Baru</button>
+              <button @click="reloadPage" class="btn-primary-full" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: 1rem;">
+                Tutup / Pesan Lagi
+              </button>
           </div>
        </div>
     </Teleport>
@@ -402,6 +417,9 @@ async function submitOrder() {
         
         if (res.success) {
             orderId.value = res.transactionId
+            // Capture total for display in success modal
+            lastOrderTotal.value = totalPrice.value 
+            
             orderSuccess.value = true
             cart.value = []
             showCartModal.value = false
@@ -414,13 +432,29 @@ async function submitOrder() {
     }
 }
 
+const lastOrderTotal = ref(0)
+
+const whatsappUrl = computed(() => {
+  if (!orderId.value) return ''
+  
+  // Format message
+  let text = `Halo Admin KopiZ, saya mau konfirmasi pesanan *Delivery*.\n\n`
+  text += `ID Pesanan: *#${orderId.value}*\n`
+  text += `Atas Nama: *${customerName.value.replace(' (Antar: ' + deliveryAddress.value + ')', '')}*\n`
+  text += `Alamat Antar: ${deliveryAddress.value}\n`
+  text += `Total: *${formatCurrency(lastOrderTotal.value)}*\n\n`
+  text += `Saya sudah melakukan pembayaran via QRIS. Berikut bukti transfernya.`
+
+  return `https://wa.me/6285393464054?text=${encodeURIComponent(text)}`
+})
+
 function reloadPage() {
     orderSuccess.value = false
     customerName.value = ''
     deliveryAddress.value = ''
+    cart.value = [] // clear cart just in case
     // Keep tableNumber if it was from param
     if (!hasTableParam.value) tableNumber.value = ''
-    // Reset orderType to default? Maybe keep current.
 }
 </script>
 
@@ -821,6 +855,32 @@ function reloadPage() {
     font-weight: 700;
     font-size: 1.1rem;
     cursor: pointer;
+}
+
+/* WhatsApp Button */
+.btn-whatsapp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #25d366;
+    color: white;
+    text-decoration: none;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    margin-top: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+}
+
+.btn-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37, 211, 102, 0.6);
+}
+
+.btn-whatsapp:active {
+    transform: scale(0.98);
 }
 
 .success-icon {
