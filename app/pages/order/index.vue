@@ -419,6 +419,7 @@ async function submitOrder() {
             orderId.value = res.transactionId
             // Capture total for display in success modal
             lastOrderTotal.value = totalPrice.value 
+            lastOrderItems.value = JSON.parse(JSON.stringify(cart.value)) // Clone items
             
             orderSuccess.value = true
             cart.value = []
@@ -433,6 +434,7 @@ async function submitOrder() {
 }
 
 const lastOrderTotal = ref(0)
+const lastOrderItems = ref([])
 
 const whatsappUrl = computed(() => {
   if (!orderId.value) return ''
@@ -441,8 +443,14 @@ const whatsappUrl = computed(() => {
   let text = `Halo Admin KopiZ, saya mau konfirmasi pesanan *Delivery*.\n\n`
   text += `ID Pesanan: *#${orderId.value}*\n`
   text += `Atas Nama: *${customerName.value.replace(' (Antar: ' + deliveryAddress.value + ')', '')}*\n`
-  text += `Alamat Antar: ${deliveryAddress.value}\n`
-  text += `Total: *${formatCurrency(lastOrderTotal.value)}*\n\n`
+  text += `Alamat Antar: ${deliveryAddress.value}\n\n`
+  
+  text += `*Detail Pesanan:*\n`
+  lastOrderItems.value.forEach(item => {
+      text += `- ${item.qty}x ${item.name} (${formatCurrency(item.price * item.qty)})\n`
+  })
+  
+  text += `\nTotal: *${formatCurrency(lastOrderTotal.value)}*\n\n`
   text += `Saya sudah melakukan pembayaran via QRIS. Berikut bukti transfernya.`
 
   return `https://wa.me/6285393464054?text=${encodeURIComponent(text)}`
