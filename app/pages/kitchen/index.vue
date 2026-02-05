@@ -54,7 +54,10 @@
                     <div class="items-list">
                     <div v-for="sale in order.sales" :key="sale.id" class="order-item">
                         <span class="qty">{{ sale.qty }}x</span>
-                        <span class="name">{{ sale.menuItem.name }}</span>
+                        <span class="name">
+                            {{ sale.menuItem.name }}
+                            <small v-if="sale.variants" style="display: block; font-size: 0.8rem; color: #cbd5e1; font-weight: normal;">{{ sale.variants }}</small>
+                        </span>
                     </div>
                     </div>
 

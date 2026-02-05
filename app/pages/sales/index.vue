@@ -155,6 +155,7 @@
               <div style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 <span v-for="(item, idx) in trx.items" :key="idx">
                   {{ item.qty }}x {{ item.name }}{{ idx < trx.items.length - 1 ? ', ' : '' }}
+                  <span v-if="item.variants" style="color: #64748b; font-size: 0.8em; font-style: italic;">({{ item.variants }})</span>
                 </span>
               </div>
 
@@ -342,6 +343,7 @@
                 <div v-for="(item, index) in cart" :key="index" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--glass-border);">
                   <div style="flex: 1;">
                     <div style="font-weight: 500;">{{ item.name }}</div>
+                    <small v-if="item.variants" style="display: block; font-size: 0.75rem; color: #94a3b8;">{{ item.variants }}</small>
                   <div style="font-size: 0.75rem; color: var(--color-text-muted);">@ {{ item.price.toLocaleString() }}</div>
                   </div>
                   
@@ -412,6 +414,7 @@
                         <div style="font-size: 0.85rem; color: var(--color-text-muted); padding-left: 0.5rem; border-left: 2px solid var(--color-border);">
                             <div v-for="item in order.sales" :key="item.id">
                                 {{ item.qty }}x {{ item.menuItem?.name || 'Item' }}
+                                <small v-if="item.variants" style="display: block; color: #94a3b8; margin-left: 1.5rem;">{{ item.variants }}</small>
                             </div>
                         </div>
                      </div>
@@ -552,7 +555,10 @@
                  <!-- Items -->
                  <div style="background: rgba(0,0,0,0.2); border-radius: 0.5rem; padding: 0.75rem;">
                     <div v-for="item in order.sales" :key="item.id" style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
-                        <span style="color: #e2e8f0;">{{ item.qty }}x {{ item.menuItem?.name }}</span>
+                        <div>
+                            <span style="color: #e2e8f0;">{{ item.qty }}x {{ item.menuItem?.name }}</span>
+                            <small v-if="item.variants" style="display: block; color: #94a3b8; margin-left: 1rem;">{{ item.variants }}</small>
+                        </div>
                         <span style="color: var(--color-text-muted);">{{ item.total.toLocaleString() }}</span>
                     </div>
                  </div>
@@ -634,10 +640,7 @@ function viewIncomingOrders() {
 const notificationAudio = ref(null)
 const showAudioBanner = ref(true)
 
-function enableAudio() {
-    console.log('Enable Audio Clicked')
-    console.log('Audio Ref:', notificationAudio.value)
-    
+function enableAudio() {    
     if (notificationAudio.value) {
         notificationAudio.value.src = '/notification1.mp3'
         // Force volume to max

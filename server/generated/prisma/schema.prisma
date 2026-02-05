@@ -60,6 +60,7 @@ model Sale {
   transactionId  String?
   discountAmount Float    @default(0)
   promoId        Int?
+  variants       String? // JSON string for selected modifiers (Sugar, Ice, etc.)
   menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
   shift          Shift?   @relation(fields: [shiftId], references: [id])
   promo          Promo?   @relation(fields: [promoId], references: [id])

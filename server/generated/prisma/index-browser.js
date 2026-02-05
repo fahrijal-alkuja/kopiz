@@ -164,6 +164,7 @@ exports.Prisma.SaleScalarFieldEnum = {
   transactionId: 'transactionId',
   discountAmount: 'discountAmount',
   promoId: 'promoId',
+  variants: 'variants',
   orderId: 'orderId'
 };
 

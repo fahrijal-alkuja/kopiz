@@ -60,12 +60,15 @@ model Sale {
   transactionId String?
   discountAmount Float    @default(0)
   promoId       Int?
+  variants      String?  // JSON string for selected modifiers (Sugar, Ice, etc.)
   menuItem      MenuItem @relation(fields: [menuItemId], references: [id])
   shift         Shift?   @relation(fields: [shiftId], references: [id])
   promo         Promo?   @relation(fields: [promoId], references: [id])
 
   @@index([date])
   @@index([transactionId])
+  @@index([menuItemId])
+  @@index([shiftId])
   orderId       Int?
   order         Order?   @relation(fields: [orderId], references: [id])
 }
@@ -81,6 +84,8 @@ model Order {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   sales         Sale[]
+
+  @@index([status])
 }
 
 model Shift {

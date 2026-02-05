@@ -6,7 +6,8 @@ const createCustomerOrderSchema = z.object({
   tableNumber: z.string(),
   items: z.array(z.object({
     menuItemId: z.number(),
-    qty: z.number()
+    qty: z.number(),
+    variants: z.string().optional().nullable() // JSON or comma-separated string
   })),
   customerName: z.string().optional().default('Guest')
 })
@@ -20,6 +21,20 @@ export default defineEventHandler(async (event) => {
   }
 
   const data = validation.data
+
+  // 0. Check Shop Status (Shift)
+  const activeShift = await prisma.shift.findFirst({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' }
+  })
+
+  if (!activeShift) {
+      throw createError({ 
+          statusCode: 403, 
+          statusMessage: 'Maaf, pesanan tidak dapat diproses karena kedai sedang tutup (Shift belum dibuka).' 
+      })
+  }
+
   const transactionId = crypto.randomUUID()
 
   // 1. Fetch Items to calculate total
@@ -103,8 +118,10 @@ export default defineEventHandler(async (event) => {
               priceSnapshot: item.price,
               costSnapshot: 0, // Calculate later or now? Let's skip cost for speed
               total: lineTotal,
+
               paymentMethod: 'PAY_LATER', // QR Orders are pay later
-              date: new Date()
+              date: new Date(),
+              variants: reqItem.variants || null
           }
       })
       

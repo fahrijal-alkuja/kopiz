@@ -32,7 +32,10 @@
           </div>
           <div class="divider-dashed"></div>
           <div v-for="(item, index) in transaction.items" :key="index" class="item-row">
-            <div class="item-name">{{ item.name }}</div>
+            <div class="item-name">
+                {{ item.name }}
+                <div v-if="item.variants" class="item-variant">({{ item.variants }})</div>
+            </div>
             <div class="item-details">
               <span class="qty">{{ item.qty }}x</span>
               <span class="price">{{ formatCurrency(item.total) }}</span>
@@ -212,6 +215,13 @@ function formatPaymentMethod(method) {
     margin-bottom: 2px;
   }
 
+  .item-variant {
+    font-size: 9px;
+    font-style: italic;
+    margin-top: 1px;
+    font-weight: normal;
+  }
+
   /* Items */
   .items {
     margin-bottom: 8px;
@@ -226,6 +236,13 @@ function formatPaymentMethod(method) {
     font-weight: 600;
     font-size: 11px;
     margin-bottom: 2px;
+  }
+
+  .item-variant {
+    font-size: 9px;
+    font-style: italic;
+    margin-top: 1px;
+    font-weight: normal;
   }
 
   .item-details {
@@ -243,6 +260,13 @@ function formatPaymentMethod(method) {
     display: flex;
     justify-content: space-between;
     margin-bottom: 2px;
+  }
+
+  .item-variant {
+    font-size: 9px;
+    font-style: italic;
+    margin-top: 1px;
+    font-weight: normal;
   }
 
   .total-row {

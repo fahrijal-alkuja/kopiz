@@ -24,45 +24,35 @@
       </div>
 
       <!-- Detail Inputs -->
-      <div class="customer-inputs card-glass">
-        <!-- Dine In -->
-        <transition name="fade" mode="out-in">
-          <div v-if="orderType === 'dinein'" key="dinein" class="input-form">
-            <label>Nama Pemesan</label>
-            <input 
-              v-model="customerName" 
-              type="text" 
-              placeholder="Masukkan Nama Anda"
-              class="form-input"
-            />
-            <small v-if="hasTableParam" style="color: var(--color-primary); margin-top: 0.5rem; display: block;">
-               Meja Terdeteksi: {{ tableNumber }}
-            </small>
-          </div>
+      <!-- Detail Inputs REMOVED (Now in Cart Modal) -->
+      <div v-if="orderType === 'dinein' && hasTableParam" class="customer-inputs card-glass" style="padding: 0.5rem 1rem; margin-top: 0.5rem;">
+          <small style="color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem;">
+              <span>📍</span> Meja Terdeteksi: <b>{{ tableNumber }}</b>
+          </small>
+      </div>
+    </div>
 
-          <!-- Takeaway -->
-          <div v-else-if="orderType === 'takeaway'" key="takeaway" class="input-form">
-            <label>Nama Pemesan</label>
-            <input 
-              v-model="customerName" 
-              type="text" 
-              placeholder="Masukkan nama Anda"
-              class="form-input"
-            />
+    <!-- Top Picks Section -->
+    <div v-if="topPicks.length > 0" class="top-picks-section">
+      <h2 class="section-title">🔥 Paling Laris</h2>
+      <div class="top-picks-scroll">
+        <div 
+          v-for="item in topPicks" 
+          :key="'top-'+item.id" 
+          class="menu-card top-pick-card"
+          @click="addToCart(item)"
+        >
+          <div class="card-content">
+             <div class="badge-best-seller">Best Seller</div>
+             <div class="item-details">
+                <h3>{{ item.name }}</h3>
+                <p class="price">{{ formatCurrency(item.price) }}</p>
+             </div>
+             <button class="add-btn small-btn">
+                <span>+</span>
+             </button>
           </div>
-
-          <!-- Delivery -->
-          <div v-else-if="orderType === 'delivery'" key="delivery" class="input-form">
-            <div class="form-group">
-               <label>Nama Pemesan</label>
-               <input v-model="customerName" type="text" placeholder="Nama Anda" class="form-input" />
-            </div>
-            <div class="form-group mt-2">
-               <label>Alamat Lengkap (WhatsApp / Info)</label>
-               <textarea v-model="deliveryAddress" placeholder="Alamat pengiriman..." class="form-input" rows="2"></textarea>
-            </div>
-          </div>
-        </transition>
+        </div>
       </div>
     </div>
 
@@ -89,6 +79,7 @@
         @click="addToCart(item)"
       >
         <div class="card-content">
+          <div v-if="item.isBestSeller" class="badge-best-seller-mini">🔥</div>
           <div class="item-details">
             <h3>{{ item.name }}</h3>
             <p class="price">{{ formatCurrency(item.price) }}</p>
@@ -182,6 +173,7 @@
             <div v-for="(item, idx) in cart" :key="idx" class="cart-row">
               <div class="cart-item-name">
                 <h4>{{ item.name }}</h4>
+                <small v-if="item.variants" style="color: #94a3b8; display: block; font-size: 0.75rem;">{{ item.variants }}</small>
                 <small>{{ formatCurrency(item.price) }}</small>
               </div>
               <div class="qty-control">
@@ -191,6 +183,29 @@
               </div>
             </div>
           </div>
+
+
+
+          <!-- Promo Code Section -->
+           <div class="promo-section" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+             <div v-if="appliedPromo" class="applied-promo">
+                <span>🏷️ Promo: <b>{{ appliedPromo.code }}</b></span>
+                <button @click="removePromo" class="remove-promo">&times;</button>
+             </div>
+             <div v-else class="promo-input-group">
+                <input 
+                    v-model="promoCodeInput" 
+                    type="text" 
+                    placeholder="Punya kode promo?" 
+                    class="promo-input"
+                    @keyup.enter="checkPromo"
+                />
+                <button @click="checkPromo" class="btn-apply" :disabled="isCheckingPromo">
+                    {{ isCheckingPromo ? '...' : 'Pakai' }}
+                </button>
+             </div>
+             <small v-if="promoMessage" :class="promoSuccess ? 'text-success' : 'text-danger'" style="display: block; margin-top: 0.25rem;">{{ promoMessage }}</small>
+           </div>
 
           <!-- Totals -->
           <div class="cart-footer">
@@ -250,6 +265,30 @@
        </div>
     </Teleport>
 
+    <!-- CLOSED SHOP OVERLAY -->
+    <Teleport to="body">
+       <div v-if="!isShopOpen" class="modal-overlay" style="align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.9);">
+           <div class="modal-content" style="text-align: center; max-width: 400px; animation: popIn 0.3s ease;">
+               <div style="font-size: 3rem; margin-bottom: 1rem;">😴</div>
+               <h2 style="color: white; margin-bottom: 0.5rem;">Maaf, Kami Tutup</h2>
+               <p style="color: #94a3b8; margin-bottom: 2rem;">
+                  Saat ini kedai sedang tutup atau belum membuka shift. Silakan kembali lagi nanti ya!
+               </p>
+               <div style="font-size: 0.9rem; color: var(--color-primary); border: 1px solid var(--color-primary); padding: 0.5rem; border-radius: 0.5rem; display: inline-block;">
+                  Jam Operasional: Cek Sosmed Kami
+               </div>
+           </div>
+       </div>
+    </Teleport>
+
+    <!-- Product Modal -->
+    <OrderProductModal 
+        :is-open="showProductModal"
+        :product="selectedProduct"
+        @close="showProductModal = false"
+        @add-to-cart="handleAddToCartFromModal"
+    />
+
   </div>
 </template>
 
@@ -260,6 +299,14 @@ definePageMeta({
 
 const route = useRoute()
 const { success, error } = useToast()
+
+// Store Status Check
+const isShopOpen = ref(true) // Default true to prevent flash, check immediately
+const { data: shopStatus } = await useFetch('/api/shop/status')
+
+if (shopStatus.value) {
+    isShopOpen.value = shopStatus.value.isOpen
+}
 
 // Data props
 const hasTableParam = computed(() => !!route.query.table)
@@ -298,6 +345,11 @@ const filteredItems = computed(() => {
     return menuItems.value.filter(i => i.category === selectedCategory.value)
 })
 
+const topPicks = computed(() => {
+    if (!menuItems.value) return []
+    return menuItems.value.filter(i => i.isBestSeller)
+})
+
 // Cart
 const cart = ref([])
 // Persistence
@@ -324,20 +376,30 @@ function formatCurrency(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 }
 
+const showProductModal = ref(false)
+const selectedProduct = ref(null)
+
 function addToCart(item) {
-    const existing = cart.value.find(c => c.id === item.id)
-    if (existing) {
-        existing.qty++
-    } else {
-        cart.value.push({ ...item, qty: 1 })
-    }
-    // Haptic equivalent
+    selectedProduct.value = item
+    showProductModal.value = true
     if (navigator.vibrate) navigator.vibrate(50)
 }
 
+function handleAddToCartFromModal(itemWithQtyAndVariants) {
+    const existing = cart.value.find(c => c.id === itemWithQtyAndVariants.id && c.variants === itemWithQtyAndVariants.variants)
+    
+    if (existing) {
+        existing.qty += itemWithQtyAndVariants.qty
+    } else {
+        cart.value.push({ ...itemWithQtyAndVariants })
+    }
+    
+    success('Berhasil ditambahkan')
+}
+
 function getItemQty(id) {
-    const item = cart.value.find(c => c.id === id)
-    return item ? item.qty : 0
+    // Sum all variants of this item
+    return cart.value.filter(c => c.id === id).reduce((sum, c) => sum + c.qty, 0)
 }
 
 function adjustQty(idx, delta) {
@@ -350,7 +412,57 @@ function adjustQty(idx, delta) {
 }
 
 const totalQty = computed(() => cart.value.reduce((a, b) => a + b.qty, 0))
-const totalPrice = computed(() => cart.value.reduce((a, b) => a + (b.qty * b.price), 0))
+
+const subtotalPrice = computed(() => cart.value.reduce((a, b) => a + (b.qty * b.price), 0))
+const totalPrice = computed(() => Math.max(0, subtotalPrice.value - discountAmount.value))
+
+// Promo Logic
+const promoCodeInput = ref('')
+const isCheckingPromo = ref(false)
+const appliedPromo = ref(null)
+const promoMessage = ref('')
+const promoSuccess = ref(false)
+
+const discountAmount = computed(() => {
+    if (!appliedPromo.value) return 0
+    if (appliedPromo.value.type === 'NOMINAL') return appliedPromo.value.value
+    if (appliedPromo.value.type === 'PERCENT') return (subtotalPrice.value * appliedPromo.value.value) / 100
+    return 0
+})
+
+async function checkPromo() {
+    if (!promoCodeInput.value) return
+    isCheckingPromo.value = true
+    promoMessage.value = ''
+    
+    try {
+        const res = await $fetch('/api/promo/check', {
+            method: 'POST',
+            body: { code: promoCodeInput.value }
+        })
+        
+        if (res.success) {
+            appliedPromo.value = { ...res.data, code: promoCodeInput.value }
+            promoSuccess.value = true
+            promoMessage.value = `Hemat ${formatCurrency(discountAmount.value)}!`
+            promoCodeInput.value = ''
+        } else {
+            promoSuccess.value = false
+            promoMessage.value = res.message
+        }
+    } catch (e) {
+        promoSuccess.value = false
+        promoMessage.value = 'Gagal mengecek promo'
+    } finally {
+        isCheckingPromo.value = false
+    }
+}
+
+function removePromo() {
+    appliedPromo.value = null
+    promoMessage.value = ''
+    promoSuccess.value = false
+}
 
 async function submitOrder() {
     isSubmitting.value = true
@@ -410,22 +522,29 @@ async function submitOrder() {
             method: 'POST',
             body: {
                 tableNumber: finalTableNumber,
-                items: cart.value.map(i => ({ menuItemId: i.id, qty: i.qty })),
-                customerName: finalCustomerName
+                items: cart.value.map(i => ({ 
+                    menuItemId: i.id, 
+                    qty: i.qty,
+                    variants: i.variants || null // Send variants
+                })),
+                customerName: finalCustomerName,
+                promoId: appliedPromo.value ? appliedPromo.value.id : null,
+                discountAmount: discountAmount.value
             }
         })
         
         if (res.success) {
-            orderId.value = res.transactionId
-            // Capture total for display in success modal
-            lastOrderTotal.value = totalPrice.value 
-            lastOrderItems.value = JSON.parse(JSON.stringify(cart.value)) // Clone items
+             orderId.value = res.orderId || res.transactionId // Handle backward compatibility
+             // Capture total for display in success modal
+             lastOrderTotal.value = totalPrice.value 
+             lastOrderItems.value = JSON.parse(JSON.stringify(cart.value)) // Clone items
             
-            orderSuccess.value = true
-            cart.value = []
-            showCartModal.value = false
-            success('Pesanan berhasil dikirim!')
-        }
+             orderSuccess.value = true
+             cart.value = []
+             appliedPromo.value = null // Reset promo
+             showCartModal.value = false
+             success('Pesanan berhasil dikirim!')
+         }
     } catch (e) {
         error('Gagal mengirim pesanan: ' + e.message)
     } finally {
@@ -440,14 +559,18 @@ const whatsappUrl = computed(() => {
   if (!orderId.value) return ''
   
   // Format message
+  // Format message
   let text = `Halo Admin KopiZ, saya mau konfirmasi pesanan *Delivery*.\n\n`
-  text += `ID Pesanan: *#${orderId.value}*\n`
-  text += `Atas Nama: *${customerName.value.replace(' (Antar: ' + deliveryAddress.value + ')', '')}*\n`
-  text += `Alamat Antar: ${deliveryAddress.value}\n\n`
+  text += `No. Order: *#${orderId.value}*\n`
+  text += `Nama: *${customerName.value}*\n`
+  text += `Alamat: ${deliveryAddress.value}\n\n`
   
-  text += `*Detail Pesanan:*\n`
+  text += `***Pesanan:***\n`
   lastOrderItems.value.forEach(item => {
-      text += `- ${item.qty}x ${item.name} (${formatCurrency(item.price * item.qty)})\n`
+      text += `${item.qty}x ${item.name} (@ ${formatCurrency(item.price)})\n`
+      if (item.variants) {
+          text += `   ____${item.variants}____\n`
+      }
   })
   
   text += `\nTotal: *${formatCurrency(lastOrderTotal.value)}*\n\n`
@@ -479,8 +602,66 @@ function reloadPage() {
     padding: 2rem 1.5rem 1rem 1.5rem;
     border-bottom-left-radius: 2rem;
     border-bottom-right-radius: 2rem;
-    margin-bottom: 1rem;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.section-title {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.top-picks-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    scrollbar-width: none;
+}
+.top-picks-scroll::-webkit-scrollbar { display: none; }
+
+.top-pick-card {
+    min-width: 140px;
+    width: 140px;
+    background: linear-gradient(145deg, #1e293b, #0f172a) !important;
+    border: 1px solid rgba(251, 191, 36, 0.3) !important; /* Gold border */
+}
+
+.top-pick-card .add-btn {
+    position: static; /* Prevent overlap with price */
+    margin-top: 0.5rem;
+    align-self: flex-end;
+}
+
+.badge-best-seller {
+    background: linear-gradient(to right, #f59e0b, #d97706);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    text-transform: uppercase;
+    box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3);
+}
+
+.badge-best-seller-mini {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 1rem;
+    filter: drop-shadow(0 0 5px orange);
+}
+
+.small-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
 }
 
 .brand-header {
@@ -579,6 +760,47 @@ function reloadPage() {
 .form-input:focus {
     border-color: var(--color-primary);
 }
+
+.promo-input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+.promo-input {
+    flex: 1;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+.btn-apply {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.applied-promo {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid #3b82f6;
+    color: #93c5fd;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.remove-promo {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+.text-success { color: #4ade80; }
+.text-danger { color: #f87171; }
 
 /* Categories */
 .sticky-categories {

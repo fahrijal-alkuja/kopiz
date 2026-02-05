@@ -5,11 +5,44 @@ export default defineEventHandler(async (event) => {
 
   if (method === 'GET') {
     const filters = getQuery(event)
+    
+    // 1. Get Top Selling items (Last 30 Days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const topSales = await prisma.sale.groupBy({
+        by: ['menuItemId'],
+        _sum: {
+            qty: true
+        },
+        where: {
+            date: {
+                gte: thirtyDaysAgo
+            }
+        },
+        orderBy: {
+            _sum: {
+                qty: 'desc'
+            }
+        },
+        take: 5
+    })
+    
+    const bestSellerIds = new Set(topSales.map(s => s.menuItemId))
+
+    // 2. Fetch Menu Items
     const items = await prisma.menuItem.findMany({
       include: { material: true },
       orderBy: { name: 'asc' }
     })
-    return items
+    
+    // 3. Inject isBestSeller flag
+    const result = items.map(item => ({
+        ...item,
+        isBestSeller: bestSellerIds.has(item.id)
+    }))
+
+    return result
   }
 
   if (method === 'POST') {

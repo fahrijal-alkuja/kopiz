@@ -5925,6 +5925,7 @@ export namespace Prisma {
     transactionId: string | null
     discountAmount: number | null
     promoId: number | null
+    variants: string | null
     orderId: number | null
   }
 
@@ -5942,6 +5943,7 @@ export namespace Prisma {
     transactionId: string | null
     discountAmount: number | null
     promoId: number | null
+    variants: string | null
     orderId: number | null
   }
 
@@ -5959,6 +5961,7 @@ export namespace Prisma {
     transactionId: number
     discountAmount: number
     promoId: number
+    variants: number
     orderId: number
     _all: number
   }
@@ -6004,6 +6007,7 @@ export namespace Prisma {
     transactionId?: true
     discountAmount?: true
     promoId?: true
+    variants?: true
     orderId?: true
   }
 
@@ -6021,6 +6025,7 @@ export namespace Prisma {
     transactionId?: true
     discountAmount?: true
     promoId?: true
+    variants?: true
     orderId?: true
   }
 
@@ -6038,6 +6043,7 @@ export namespace Prisma {
     transactionId?: true
     discountAmount?: true
     promoId?: true
+    variants?: true
     orderId?: true
     _all?: true
   }
@@ -6142,6 +6148,7 @@ export namespace Prisma {
     transactionId: string | null
     discountAmount: number
     promoId: number | null
+    variants: string | null
     orderId: number | null
     _count: SaleCountAggregateOutputType | null
     _avg: SaleAvgAggregateOutputType | null
@@ -6178,6 +6185,7 @@ export namespace Prisma {
     transactionId?: boolean
     discountAmount?: boolean
     promoId?: boolean
+    variants?: boolean
     orderId?: boolean
     menuItem?: boolean | MenuItemDefaultArgs<ExtArgs>
     shift?: boolean | Sale$shiftArgs<ExtArgs>
@@ -6199,6 +6207,7 @@ export namespace Prisma {
     transactionId?: boolean
     discountAmount?: boolean
     promoId?: boolean
+    variants?: boolean
     orderId?: boolean
     menuItem?: boolean | MenuItemDefaultArgs<ExtArgs>
     shift?: boolean | Sale$shiftArgs<ExtArgs>
@@ -6220,6 +6229,7 @@ export namespace Prisma {
     transactionId?: boolean
     discountAmount?: boolean
     promoId?: boolean
+    variants?: boolean
     orderId?: boolean
     menuItem?: boolean | MenuItemDefaultArgs<ExtArgs>
     shift?: boolean | Sale$shiftArgs<ExtArgs>
@@ -6241,10 +6251,11 @@ export namespace Prisma {
     transactionId?: boolean
     discountAmount?: boolean
     promoId?: boolean
+    variants?: boolean
     orderId?: boolean
   }
 
-  export type SaleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "date" | "menuItemId" | "qty" | "priceSnapshot" | "costSnapshot" | "total" | "paymentMethod" | "createdAt" | "shiftId" | "transactionId" | "discountAmount" | "promoId" | "orderId", ExtArgs["result"]["sale"]>
+  export type SaleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "date" | "menuItemId" | "qty" | "priceSnapshot" | "costSnapshot" | "total" | "paymentMethod" | "createdAt" | "shiftId" | "transactionId" | "discountAmount" | "promoId" | "variants" | "orderId", ExtArgs["result"]["sale"]>
   export type SaleInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     menuItem?: boolean | MenuItemDefaultArgs<ExtArgs>
     shift?: boolean | Sale$shiftArgs<ExtArgs>
@@ -6286,6 +6297,7 @@ export namespace Prisma {
       transactionId: string | null
       discountAmount: number
       promoId: number | null
+      variants: string | null
       orderId: number | null
     }, ExtArgs["result"]["sale"]>
     composites: {}
@@ -6727,6 +6739,7 @@ export namespace Prisma {
     readonly transactionId: FieldRef<"Sale", 'String'>
     readonly discountAmount: FieldRef<"Sale", 'Float'>
     readonly promoId: FieldRef<"Sale", 'Int'>
+    readonly variants: FieldRef<"Sale", 'String'>
     readonly orderId: FieldRef<"Sale", 'Int'>
   }
     
@@ -18665,6 +18678,7 @@ export namespace Prisma {
     transactionId: 'transactionId',
     discountAmount: 'discountAmount',
     promoId: 'promoId',
+    variants: 'variants',
     orderId: 'orderId'
   };
 
@@ -19169,6 +19183,7 @@ export namespace Prisma {
     transactionId?: StringNullableFilter<"Sale"> | string | null
     discountAmount?: FloatFilter<"Sale"> | number
     promoId?: IntNullableFilter<"Sale"> | number | null
+    variants?: StringNullableFilter<"Sale"> | string | null
     orderId?: IntNullableFilter<"Sale"> | number | null
     menuItem?: XOR<MenuItemScalarRelationFilter, MenuItemWhereInput>
     shift?: XOR<ShiftNullableScalarRelationFilter, ShiftWhereInput> | null
@@ -19190,6 +19205,7 @@ export namespace Prisma {
     transactionId?: SortOrderInput | SortOrder
     discountAmount?: SortOrder
     promoId?: SortOrderInput | SortOrder
+    variants?: SortOrderInput | SortOrder
     orderId?: SortOrderInput | SortOrder
     menuItem?: MenuItemOrderByWithRelationInput
     shift?: ShiftOrderByWithRelationInput
@@ -19214,6 +19230,7 @@ export namespace Prisma {
     transactionId?: StringNullableFilter<"Sale"> | string | null
     discountAmount?: FloatFilter<"Sale"> | number
     promoId?: IntNullableFilter<"Sale"> | number | null
+    variants?: StringNullableFilter<"Sale"> | string | null
     orderId?: IntNullableFilter<"Sale"> | number | null
     menuItem?: XOR<MenuItemScalarRelationFilter, MenuItemWhereInput>
     shift?: XOR<ShiftNullableScalarRelationFilter, ShiftWhereInput> | null
@@ -19235,6 +19252,7 @@ export namespace Prisma {
     transactionId?: SortOrderInput | SortOrder
     discountAmount?: SortOrder
     promoId?: SortOrderInput | SortOrder
+    variants?: SortOrderInput | SortOrder
     orderId?: SortOrderInput | SortOrder
     _count?: SaleCountOrderByAggregateInput
     _avg?: SaleAvgOrderByAggregateInput
@@ -19260,6 +19278,7 @@ export namespace Prisma {
     transactionId?: StringNullableWithAggregatesFilter<"Sale"> | string | null
     discountAmount?: FloatWithAggregatesFilter<"Sale"> | number
     promoId?: IntNullableWithAggregatesFilter<"Sale"> | number | null
+    variants?: StringNullableWithAggregatesFilter<"Sale"> | string | null
     orderId?: IntNullableWithAggregatesFilter<"Sale"> | number | null
   }
 
@@ -20198,6 +20217,7 @@ export namespace Prisma {
     createdAt?: Date | string
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     menuItem: MenuItemCreateNestedOneWithoutSalesInput
     shift?: ShiftCreateNestedOneWithoutSalesInput
     promo?: PromoCreateNestedOneWithoutSalesInput
@@ -20218,6 +20238,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -20231,6 +20252,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     menuItem?: MenuItemUpdateOneRequiredWithoutSalesNestedInput
     shift?: ShiftUpdateOneWithoutSalesNestedInput
     promo?: PromoUpdateOneWithoutSalesNestedInput
@@ -20251,6 +20273,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -20268,6 +20291,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -20281,6 +20305,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type SaleUncheckedUpdateManyInput = {
@@ -20297,6 +20322,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -21427,6 +21453,7 @@ export namespace Prisma {
     transactionId?: SortOrder
     discountAmount?: SortOrder
     promoId?: SortOrder
+    variants?: SortOrder
     orderId?: SortOrder
   }
 
@@ -21457,6 +21484,7 @@ export namespace Prisma {
     transactionId?: SortOrder
     discountAmount?: SortOrder
     promoId?: SortOrder
+    variants?: SortOrder
     orderId?: SortOrder
   }
 
@@ -21474,6 +21502,7 @@ export namespace Prisma {
     transactionId?: SortOrder
     discountAmount?: SortOrder
     promoId?: SortOrder
+    variants?: SortOrder
     orderId?: SortOrder
   }
 
@@ -23134,6 +23163,7 @@ export namespace Prisma {
     createdAt?: Date | string
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     shift?: ShiftCreateNestedOneWithoutSalesInput
     promo?: PromoCreateNestedOneWithoutSalesInput
     order?: OrderCreateNestedOneWithoutSalesInput
@@ -23152,6 +23182,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -23263,6 +23294,7 @@ export namespace Prisma {
     transactionId?: StringNullableFilter<"Sale"> | string | null
     discountAmount?: FloatFilter<"Sale"> | number
     promoId?: IntNullableFilter<"Sale"> | number | null
+    variants?: StringNullableFilter<"Sale"> | string | null
     orderId?: IntNullableFilter<"Sale"> | number | null
   }
 
@@ -23865,6 +23897,7 @@ export namespace Prisma {
     createdAt?: Date | string
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     menuItem: MenuItemCreateNestedOneWithoutSalesInput
     shift?: ShiftCreateNestedOneWithoutSalesInput
     promo?: PromoCreateNestedOneWithoutSalesInput
@@ -23884,6 +23917,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
   }
 
   export type SaleCreateOrConnectWithoutOrderInput = {
@@ -23922,6 +23956,7 @@ export namespace Prisma {
     createdAt?: Date | string
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     menuItem: MenuItemCreateNestedOneWithoutSalesInput
     promo?: PromoCreateNestedOneWithoutSalesInput
     order?: OrderCreateNestedOneWithoutSalesInput
@@ -23940,6 +23975,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -24292,6 +24328,7 @@ export namespace Prisma {
     createdAt?: Date | string
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     menuItem: MenuItemCreateNestedOneWithoutSalesInput
     shift?: ShiftCreateNestedOneWithoutSalesInput
     order?: OrderCreateNestedOneWithoutSalesInput
@@ -24310,6 +24347,7 @@ export namespace Prisma {
     shiftId?: number | null
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -24527,6 +24565,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -24560,6 +24599,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     shift?: ShiftUpdateOneWithoutSalesNestedInput
     promo?: PromoUpdateOneWithoutSalesNestedInput
     order?: OrderUpdateOneWithoutSalesNestedInput
@@ -24578,6 +24618,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -24594,6 +24635,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -24755,6 +24797,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
   }
 
   export type SaleUpdateWithoutOrderInput = {
@@ -24767,6 +24810,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     menuItem?: MenuItemUpdateOneRequiredWithoutSalesNestedInput
     shift?: ShiftUpdateOneWithoutSalesNestedInput
     promo?: PromoUpdateOneWithoutSalesNestedInput
@@ -24786,6 +24830,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type SaleUncheckedUpdateManyWithoutOrderInput = {
@@ -24802,6 +24847,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type SaleCreateManyShiftInput = {
@@ -24817,6 +24863,7 @@ export namespace Prisma {
     transactionId?: string | null
     discountAmount?: number
     promoId?: number | null
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -24830,6 +24877,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     menuItem?: MenuItemUpdateOneRequiredWithoutSalesNestedInput
     promo?: PromoUpdateOneWithoutSalesNestedInput
     order?: OrderUpdateOneWithoutSalesNestedInput
@@ -24848,6 +24896,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -24864,6 +24913,7 @@ export namespace Prisma {
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
     promoId?: NullableIntFieldUpdateOperationsInput | number | null
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -24964,6 +25014,7 @@ export namespace Prisma {
     shiftId?: number | null
     transactionId?: string | null
     discountAmount?: number
+    variants?: string | null
     orderId?: number | null
   }
 
@@ -24977,6 +25028,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     menuItem?: MenuItemUpdateOneRequiredWithoutSalesNestedInput
     shift?: ShiftUpdateOneWithoutSalesNestedInput
     order?: OrderUpdateOneWithoutSalesNestedInput
@@ -24995,6 +25047,7 @@ export namespace Prisma {
     shiftId?: NullableIntFieldUpdateOperationsInput | number | null
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
@@ -25011,6 +25064,7 @@ export namespace Prisma {
     shiftId?: NullableIntFieldUpdateOperationsInput | number | null
     transactionId?: NullableStringFieldUpdateOperationsInput | string | null
     discountAmount?: FloatFieldUpdateOperationsInput | number
+    variants?: NullableStringFieldUpdateOperationsInput | string | null
     orderId?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
