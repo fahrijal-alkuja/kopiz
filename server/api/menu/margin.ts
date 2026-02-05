@@ -27,9 +27,9 @@ export default defineEventHandler(async (event) => {
       id: item.id,
       name: item.name,
       price: item.price,
-      hpp: parseFloat(hpp.toFixed(2)),
-      margin: parseFloat((item.price - hpp).toFixed(2)),
-      marginPercent: item.price > 0 ? parseFloat(((item.price - hpp) / item.price * 100).toFixed(2)) : 0
+      hpp: Math.round(hpp),
+      margin: item.price - Math.round(hpp),
+      marginPercent: item.price > 0 ? parseFloat(((item.price - Math.round(hpp)) / item.price * 100).toFixed(0)) : 0
     }
   })
 

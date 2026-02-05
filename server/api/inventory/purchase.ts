@@ -34,7 +34,8 @@ export default defineEventHandler(async (event) => {
     if (newStock > 0) {
       const totalValueOld = currentStock * currentCost
       const totalValueNew = quantity * pricePerUnit
-      newCostPerUnit = (totalValueOld + totalValueNew) / newStock
+      const rawCost = (totalValueOld + totalValueNew) / newStock
+      newCostPerUnit = Math.round(rawCost)
     }
 
     const updatedMaterial = await tx.material.update({
